@@ -4,10 +4,9 @@ import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class ByteAdditionInstruction extends ByteCarryInstruction
+public class XOR extends ByteNoCarryInstruction
 {
-
-    public ByteAdditionInstruction(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+    public XOR(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
     {
         super(a, b, setter);
     }
@@ -15,6 +14,7 @@ public class ByteAdditionInstruction extends ByteCarryInstruction
     @Override
     public int applyOperation(CPU cpu, Byte a, Byte b)
     {
-        return a + b;
+        return a ^ b;
     }
+
 }

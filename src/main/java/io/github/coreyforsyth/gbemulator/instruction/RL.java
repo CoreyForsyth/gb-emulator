@@ -20,11 +20,11 @@ public class RL implements Instruction
     public void accept(CPU cpu)
     {
         int value = getter.apply(cpu);
-        boolean carry = cpu.isCarry();
-        value = (value << 1) | (carry ? 1 : 0);
-        cpu.setZero(value == 0);
-        setter.accept(cpu, (byte) value);
+        boolean carry = (value & 0x80) == 0x80;
+        value = (value << 1) | (cpu.isCarry() ? 1 : 0);
         cpu.clearFlags();
+        cpu.setZero(value == 0);
         cpu.setCarry(carry);
+        setter.accept(cpu, (byte) value);
     }
 }

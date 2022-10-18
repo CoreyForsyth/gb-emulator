@@ -1,13 +1,13 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.Supplier;
+import java.util.function.Predicate;
 
-public class CallInstruction implements Instruction
+public class CALL implements Instruction
 {
-    private final Supplier<Boolean> call;
+    private final Predicate<CPU> call;
 
-    public CallInstruction(Supplier<Boolean> call)
+    public CALL(Predicate<CPU> call)
     {
         this.call = call;
     }
@@ -16,7 +16,8 @@ public class CallInstruction implements Instruction
     public void accept(CPU cpu)
     {
         char routineAddress = cpu.nextChar();
-        if (call.get()) {
+        if (call.test(cpu))
+        {
             byte pcLower = cpu.getPCLower();
             byte pcHigher = cpu.getPCHigher();
             char sp = cpu.getSP();

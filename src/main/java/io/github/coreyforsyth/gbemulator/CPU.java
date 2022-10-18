@@ -1,5 +1,6 @@
 package io.github.coreyforsyth.gbemulator;
 
+import io.github.coreyforsyth.gbemulator.instruction.Instructions;
 import io.github.coreyforsyth.gbemulator.memory.HRam;
 import io.github.coreyforsyth.gbemulator.memory.Cartridge;
 import io.github.coreyforsyth.gbemulator.memory.WorkRam;
@@ -62,7 +63,7 @@ public class CPU
             // sprite attribute table
             return 0;
         } else if (address < 0xFF00) {
-            // sprite attribute table
+            // unusable
             return 0;
         } else if (address < 0xFF80) {
             // IO
@@ -153,6 +154,14 @@ public class CPU
         return PC++;
     }
 
+    public byte readHL() {
+        return readByte(getHL());
+    }
+
+    public void writeHL(byte value) {
+        writeByte(getHL(), value);
+    }
+
     public void clearFlags() {
         zero = false;
         subtraction = false;
@@ -160,4 +169,49 @@ public class CPU
         carry = false;
     }
 
+    private long cycle = 0;
+    private byte FF05 = 0;
+    private byte FF06 = 0;
+
+    public void gogo() {
+        cycle = 0;
+        FF05++;
+        if (FF05 == 0) {
+            FF05 = FF06;
+        }
+        while (true) {
+            cycle++;
+            Instructions.next(this);
+        }
+    }
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

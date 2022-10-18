@@ -8,334 +8,371 @@ public class Instructions
 {
 
     public static Instruction[] instructions;
-    private static final Instruction nop = cpu -> {};
+    private static final Instruction nop = cpu -> {
+    };
 
-    static  {
+    static
+    {
         instructions = new Instruction[0x100];
-        // nop
-        instructions[0x00] = cpu -> {};
-        // LD BC, d16
+        instructions[0x00] = cpu -> {
+        };
         instructions[0x01] = cpu -> cpu.setBC(cpu.nextChar());
-        // LD (BC), A
         instructions[0x02] = cpu -> cpu.writeByte(cpu.getBC(), cpu.getA());
-        // LD (BC), A
         instructions[0x03] = cpu -> cpu.setBC((char) (cpu.getBC() + 1));
-        // INC B
-        instructions[0x04] = cpu -> cpu.setB((byte) (cpu.getB() + 1));
-        // DEC B
-        instructions[0x05] = cpu -> cpu.setB((byte) (cpu.getB() - 1));
-        // LD B, d8
+        instructions[0x04] = new INC(CPU::getB, CPU::setB);
+        instructions[0x05] = new DEC(CPU::getB, CPU::setB);
         instructions[0x06] = cpu -> cpu.setB(cpu.nextByte());
-        // RLCA
-        instructions[0x07] = nop;
-        // LD (a16), SP
+        instructions[0x07] = cpu -> {
+            boolean carry = (cpu.getA() & 0x80) == 0x80;
+            cpu.setA((byte) ((cpu.getA() << 1) | (carry ? 1 : 0)));
+            cpu.clearFlags();
+            cpu.setCarry(carry);
+        };
         instructions[0x08] = cpu -> {
             char c = cpu.nextChar();
             cpu.writeByte(c, (byte) (cpu.getSP() & 0xFF));
             cpu.writeByte((char) (c + 1), (byte) ((cpu.getSP() & 0xFF00) >> 8));
         };
-        // ADD HL, BC
-        instructions[0x09] = new CharAdditionInstruction(CPU::getHL, CPU::getBC, CPU::setHL);
-        // LD A, (BC)
+        instructions[0x09] = new ADDChar(CPU::getHL, CPU::getBC, CPU::setHL);
         instructions[0x0A] = cpu -> cpu.setA(cpu.readByte(cpu.getBC()));
-        // DEC BC
         instructions[0x0B] = cpu -> cpu.setBC((char) (cpu.getBC() - 1));
-        // INC C
-        instructions[0x0C] = cpu -> cpu.setC((byte) (cpu.getC() + 1));
-        // DEC C
-        instructions[0x0D] = cpu -> cpu.setC((byte) (cpu.getC() - 1));
-        // LD C, d8
+        instructions[0x0C] = new INC(CPU::getC, CPU::setC);
+        instructions[0x0D] = new DEC(CPU::getC, CPU::setC);
         instructions[0x0E] = cpu -> cpu.setC(cpu.nextByte());
-        // RRCA
-        instructions[0x0F] = nop;
-        // stop
-        instructions[0x10] = nop;
-        // LD DE, d16
-        instructions[0x11] = cpu -> cpu.setDE(cpu.nextChar());
-        // LD (DE), A
-        instructions[0x12] = cpu -> cpu.writeByte(cpu.getDE(), cpu.getA());
-        // INC DE
-        instructions[0x13] = cpu -> cpu.setDE((char) (cpu.getDE() + 1));
-        // INC B
-        instructions[0x14] = cpu -> cpu.setD((byte) (cpu.getD() + 1));
-        // DEC D
-        instructions[0x15] = cpu -> cpu.setD((byte) (cpu.getD() - 1));
-        // LD D, d8
-        instructions[0x16] = cpu -> cpu.setD(cpu.nextByte());
-        // RLA
-        instructions[0x17] = nop;
-        // JR s8
-        instructions[0x18] = cpu -> cpu.setPC((char) (cpu.nextByte() + cpu.getPC()));
-        // ADD HL, DE
-        instructions[0x19] = new CharAdditionInstruction(CPU::getHL, CPU::getDE, CPU::setHL);
-        // LD A, (DE)
-        instructions[0x1A] = cpu -> cpu.setA(cpu.readByte(cpu.getDE()));
-        // DEC DE
-        instructions[0x1B] = cpu -> cpu.setDE((char) (cpu.getDE() - 1));
-        // INC E
-        instructions[0x1C] = cpu -> cpu.setE((byte) (cpu.getE() + 1));
-        // DEC E
-        instructions[0x1D] = cpu -> cpu.setE((byte) (cpu.getE() - 1));
-        // LD E, d8
-        instructions[0x1E] = cpu -> cpu.setE(cpu.nextByte());
-        // RRA
-        instructions[0x1F] = cpu -> {
-            byte a = cpu.getA();
-            cpu.setA((byte) ((a & 0xFF >> 1) | (cpu.isCarry() ? 0x80 : 0)));
+        instructions[0x0F] = cpu -> {
+            boolean carry = (cpu.getA() & 0x01) == 0x01;
+            cpu.setA((byte) ((cpu.getA() >> 1) | (carry ? 0x80 : 0)));
             cpu.clearFlags();
-            cpu.setCarry((a & 1) == 1);
+            cpu.setCarry(carry);
         };
-        // JR NZ, s8
-        instructions[0x20] = cpu -> {
-            if (!cpu.isZero()) {
-                cpu.setPC((char) (cpu.getPC() + cpu.nextByte()));
-            }
+        instructions[0x10] = nop;
+        instructions[0x11] = cpu -> cpu.setDE(cpu.nextChar());
+        instructions[0x12] = cpu -> cpu.writeByte(cpu.getDE(), cpu.getA());
+        instructions[0x13] = cpu -> cpu.setDE((char) (cpu.getDE() + 1));
+        instructions[0x14] = new INC(CPU::getD, CPU::setD);
+        instructions[0x15] = new DEC(CPU::getD, CPU::setD);
+        instructions[0x16] = cpu -> cpu.setD(cpu.nextByte());
+        instructions[0x17] = cpu -> {
+            boolean carry = (cpu.getA() & 0x80) == 0x80;
+            cpu.setA((byte) ((cpu.getA() >> 1) | (cpu.isCarry() ? 1 : 0)));
+            cpu.clearFlags();
+            cpu.setCarry(carry);
         };
-        // LD HL,d16
+        instructions[0x18] = new JR(cpu -> true);
+        instructions[0x19] = new ADDChar(CPU::getHL, CPU::getDE, CPU::setHL);
+        instructions[0x1A] = cpu -> cpu.setA(cpu.readByte(cpu.getDE()));
+        instructions[0x1B] = cpu -> cpu.setDE((char) (cpu.getDE() - 1));
+        instructions[0x1C] = new INC(CPU::getE, CPU::setE);
+        instructions[0x1D] = new DEC(CPU::getE, CPU::setE);
+        instructions[0x1E] = cpu -> cpu.setE(cpu.nextByte());
+        instructions[0x1F] = cpu -> {
+            boolean carry = (cpu.getA() & 0x01) == 0x01;
+            cpu.setA((byte) ((cpu.getA() >> 1) | (cpu.isCarry() ? 0x80 : 0)));
+            cpu.clearFlags();
+            cpu.setCarry(carry);
+        };
+        instructions[0x20] = new JR(cpu -> !cpu.isZero());
         instructions[0x21] = cpu -> cpu.setHL(cpu.nextChar());
-        // LD (HL+), A
         instructions[0x22] = cpu -> {
-            cpu.writeByte(cpu.getHL(), cpu.getA());
+            cpu.writeHL(cpu.getA());
             cpu.setHL((char) (cpu.getHL() + 1));
         };
-        // INC HL
         instructions[0x23] = cpu -> cpu.setHL((char) (cpu.getHL() + 1));
-        // INC H
-        instructions[0x24] = cpu -> cpu.setH((byte) (cpu.getH() + 1));
-        // DEC H
-        instructions[0x25] = cpu -> cpu.setH((byte) (cpu.getH() - 1));
-        // LD H, d8
+        instructions[0x24] = new INC(CPU::getH, CPU::setH);
+        instructions[0x25] = new DEC(CPU::getH, CPU::setH);
         instructions[0x26] = cpu -> cpu.setH(cpu.nextByte());
-        // DAA
-        instructions[0x27] = cpu -> {};
-        // JR Z, s8
-        instructions[0x28] = cpu -> {
-            byte b = cpu.nextByte();
-            if (cpu.isZero()) {
-                cpu.setPC((char) (cpu.getPC() + b));
+        instructions[0x27] = cpu -> {
+            if (cpu.isSubtraction())
+            {
+                if (cpu.isCarry())
+                {
+                    cpu.setA((byte) (cpu.getA() - 0x60));
+                }
+                if (cpu.isHalfCarry())
+                {
+                    cpu.setA((byte) (cpu.getA() - 0x06));
+                }
             }
+            else
+            {
+                if (cpu.isCarry() || (Byte.toUnsignedInt(cpu.getA())) > 0x99)
+                {
+                    cpu.setA((byte) (cpu.getA() + 0x60));
+                    cpu.setCarry(true);
+                }
+                if (cpu.isHalfCarry() || (cpu.getA() & 0x0f) > 0x09)
+                {
+                    cpu.setA((byte) (cpu.getA() + 0x06));
+                }
+            }
+            cpu.setZero(cpu.getA() == 0);
+            cpu.setHalfCarry(false);
         };
+        instructions[0x28] = new JR(CPU::isZero);
         // ADD HL, HL
-        instructions[0x29] = new CharAdditionInstruction(CPU::getHL, CPU::getHL, CPU::setHL);
+        instructions[0x29] = new ADDChar(CPU::getHL, CPU::getHL, CPU::setHL);
         // LD A, (HL+)
         instructions[0x2A] = cpu -> {
-            cpu.setA(cpu.readByte(cpu.getHL()));
-            cpu.setHL((char) (cpu.getHL() + 1));
+            byte hlContent = cpu.readHL();
+            cpu.setA(hlContent);
+            cpu.writeHL((byte) (hlContent + 1));
+        };
+        instructions[0x2B] = cpu -> cpu.setHL((char) (cpu.getHL() - 1));
+        instructions[0x2C] = new INC(CPU::getL, CPU::setL);
+        instructions[0x2D] = new DEC(CPU::getL, CPU::setL);
+        instructions[0x2E] = cpu -> cpu.setL(cpu.nextByte());
+        instructions[0x2F] = cpu -> {
+            cpu.setA((byte) ~cpu.getA());
+            cpu.setSubtraction(true);
+            cpu.setHalfCarry(true);
         };
 
-        instructions[0x30] = nop;
-        instructions[0x31] = nop;
-        instructions[0x32] = nop;
-        instructions[0x33] = nop;
-        instructions[0x34] = nop;
-        instructions[0x35] = nop;
-        instructions[0x36] = nop;
-        instructions[0x37] = nop;
-        instructions[0x38] = nop;
-        instructions[0x39] = nop;
-        instructions[0x3A] = nop;
-        instructions[0x3B] = nop;
-        instructions[0x3C] = nop;
-        instructions[0x3D] = nop;
+        instructions[0x30] = new JR(cpu -> !cpu.isCarry());
+        instructions[0x31] = cpu -> cpu.setSP(cpu.nextChar());
+        instructions[0x32] = cpu -> {
+            cpu.writeHL(cpu.getA());
+            cpu.setHL((char) (cpu.getHL() - 1));
+        };
+        instructions[0x33] = cpu -> cpu.setSP((char) (cpu.getSP() + 1));
+        instructions[0x34] = new INC(CPU::readHL, CPU::writeHL);
+        instructions[0x35] = new DEC(CPU::readHL, CPU::writeHL);
+        instructions[0x36] = cpu -> cpu.writeHL(cpu.nextByte());
+        instructions[0x37] = cpu -> {
+            cpu.setCarry(true);
+            cpu.setHalfCarry(false);
+            cpu.setSubtraction(false);
+        };
+        instructions[0x38] = new JR(CPU::isCarry);
+        instructions[0x39] = new ADDChar(CPU::getHL, CPU::getSP, CPU::setHL);
+        instructions[0x3A] = cpu -> {
+            byte hlContent = cpu.readHL();
+            cpu.setA(hlContent);
+            cpu.writeHL((byte) (hlContent - 1));
+        };
+        instructions[0x3B] = cpu -> cpu.setSP((char) (cpu.getSP() - 1));
+        instructions[0x3C] = new INC(CPU::getA, CPU::setA);
+        instructions[0x3D] = new DEC(CPU::getA, CPU::setA);
         // LD A, d8
         instructions[0x3E] = cpu -> cpu.setA(cpu.nextByte());
-        instructions[0x3F] = nop;
-        instructions[0X40] = nop;
-        instructions[0X41] = nop;
-        instructions[0X42] = nop;
-        instructions[0X43] = nop;
-        instructions[0X44] = nop;
-        instructions[0X45] = nop;
-        instructions[0X46] = nop;
-        // LD B, A
+        instructions[0x3F] = cpu -> {
+            cpu.setSubtraction(false);
+            cpu.setHalfCarry(false);
+            cpu.setCarry(!cpu.isCarry());
+        };
+        instructions[0X40] = cpu -> cpu.setB(cpu.getB());
+        instructions[0X41] = cpu -> cpu.setB(cpu.getC());
+        instructions[0X42] = cpu -> cpu.setB(cpu.getD());
+        instructions[0X43] = cpu -> cpu.setB(cpu.getE());
+        instructions[0X44] = cpu -> cpu.setB(cpu.getH());
+        instructions[0X45] = cpu -> cpu.setB(cpu.getL());
+        instructions[0X46] = cpu -> cpu.setB(cpu.readByte(cpu.getHL()));
         instructions[0X47] = cpu -> cpu.setB(cpu.getA());
-        instructions[0X48] = nop;
-        instructions[0X49] = nop;
-        instructions[0X4A] = nop;
-        instructions[0X4B] = nop;
-        instructions[0X4C] = nop;
-        instructions[0X4D] = nop;
-        instructions[0X4E] = nop;
-        instructions[0X4F] = nop;
-        instructions[0X50] = nop;
-        instructions[0X51] = nop;
-        instructions[0X52] = nop;
-        instructions[0X53] = nop;
-        instructions[0X54] = nop;
-        instructions[0X55] = nop;
-        instructions[0X56] = nop;
-        instructions[0X57] = nop;
-        instructions[0X58] = nop;
-        instructions[0X59] = nop;
-        instructions[0X5A] = nop;
-        instructions[0X5B] = nop;
-        instructions[0X5C] = nop;
-        instructions[0X5D] = nop;
-        instructions[0X5E] = nop;
-        instructions[0X5F] = nop;
-        instructions[0X60] = nop;
-        instructions[0X61] = nop;
-        instructions[0X62] = nop;
-        instructions[0X63] = nop;
-        instructions[0X64] = nop;
-        instructions[0X65] = nop;
-        instructions[0X66] = nop;
-        instructions[0X67] = nop;
-        instructions[0X68] = nop;
-        instructions[0X69] = nop;
-        instructions[0X6A] = nop;
-        instructions[0X6B] = nop;
-        instructions[0X6C] = nop;
-        instructions[0X6D] = nop;
-        instructions[0X6E] = nop;
-        instructions[0X6F] = nop;
-        instructions[0X70] = nop;
-        instructions[0X71] = nop;
-        instructions[0X72] = nop;
-        instructions[0X73] = nop;
-        instructions[0X74] = nop;
-        instructions[0X75] = nop;
-        instructions[0X76] = nop;
-        instructions[0X77] = nop;
-        instructions[0X78] = nop;
-        instructions[0X79] = nop;
-        instructions[0X7A] = nop;
-        instructions[0X7B] = nop;
-        instructions[0X7C] = nop;
-        instructions[0X7D] = nop;
-        instructions[0X7E] = nop;
-        instructions[0X7F] = nop;
-        instructions[0X80] = new ByteAdditionInstruction(CPU::getA, CPU::getB, CPU::setA);
-        instructions[0X81] = nop;
-        instructions[0X82] = nop;
-        instructions[0X83] = nop;
-        instructions[0X84] = nop;
-        instructions[0X85] = nop;
-        instructions[0X86] = nop;
-        instructions[0X87] = nop;
-        instructions[0X88] = nop;
-        instructions[0X89] = nop;
-        instructions[0X8A] = nop;
-        instructions[0X8B] = nop;
-        instructions[0X8C] = nop;
-        instructions[0X8D] = nop;
-        instructions[0X8E] = nop;
-        instructions[0X8F] = nop;
+        instructions[0X48] = cpu -> cpu.setC(cpu.getB());
+        instructions[0X49] = cpu -> cpu.setC(cpu.getC());
+        instructions[0X4A] = cpu -> cpu.setC(cpu.getD());
+        instructions[0X4B] = cpu -> cpu.setC(cpu.getE());
+        instructions[0X4C] = cpu -> cpu.setC(cpu.getH());
+        instructions[0X4D] = cpu -> cpu.setC(cpu.getL());
+        instructions[0X4E] = cpu -> cpu.setC(cpu.readByte(cpu.getHL()));
+        instructions[0X4F] = cpu -> cpu.setC(cpu.getA());
+        instructions[0X50] = cpu -> cpu.setD(cpu.getB());
+        instructions[0X51] = cpu -> cpu.setD(cpu.getC());
+        instructions[0X52] = cpu -> cpu.setD(cpu.getD());
+        instructions[0X53] = cpu -> cpu.setD(cpu.getE());
+        instructions[0X54] = cpu -> cpu.setD(cpu.getH());
+        instructions[0X55] = cpu -> cpu.setD(cpu.getL());
+        instructions[0X56] = cpu -> cpu.setD(cpu.readByte(cpu.getHL()));
+        instructions[0X57] = cpu -> cpu.setD(cpu.getA());
+        instructions[0X58] = cpu -> cpu.setE(cpu.getB());
+        instructions[0X59] = cpu -> cpu.setE(cpu.getC());
+        instructions[0X5A] = cpu -> cpu.setE(cpu.getD());
+        instructions[0X5B] = cpu -> cpu.setE(cpu.getE());
+        instructions[0X5C] = cpu -> cpu.setE(cpu.getH());
+        instructions[0X5D] = cpu -> cpu.setE(cpu.getL());
+        instructions[0X5E] = cpu -> cpu.setE(cpu.readByte(cpu.getHL()));
+        instructions[0X5F] = cpu -> cpu.setE(cpu.getA());
+        instructions[0X60] = cpu -> cpu.setH(cpu.getB());
+        instructions[0X61] = cpu -> cpu.setH(cpu.getC());
+        instructions[0X62] = cpu -> cpu.setH(cpu.getD());
+        instructions[0X63] = cpu -> cpu.setH(cpu.getE());
+        instructions[0X64] = cpu -> cpu.setH(cpu.getH());
+        instructions[0X65] = cpu -> cpu.setH(cpu.getL());
+        instructions[0X66] = cpu -> cpu.setH(cpu.readByte(cpu.getHL()));
+        instructions[0X67] = cpu -> cpu.setH(cpu.getA());
+        instructions[0X68] = cpu -> cpu.setL(cpu.getB());
+        instructions[0X69] = cpu -> cpu.setL(cpu.getC());
+        instructions[0X6A] = cpu -> cpu.setL(cpu.getD());
+        instructions[0X6B] = cpu -> cpu.setL(cpu.getE());
+        instructions[0X6C] = cpu -> cpu.setL(cpu.getH());
+        instructions[0X6D] = cpu -> cpu.setL(cpu.getL());
+        instructions[0X6E] = cpu -> cpu.setL(cpu.readByte(cpu.getHL()));
+        instructions[0X6F] = cpu -> cpu.setL(cpu.getA());
+        instructions[0X70] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getB());
+        instructions[0X71] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getC());
+        instructions[0X72] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getD());
+        instructions[0X73] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getE());
+        instructions[0X74] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getH());
+        instructions[0X75] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getL());
+        instructions[0X76] = nop; // TODO: HALT
+        instructions[0X77] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getA());
+        instructions[0X78] = cpu -> cpu.setA(cpu.getB());
+        instructions[0X79] = cpu -> cpu.setA(cpu.getC());
+        instructions[0X7A] = cpu -> cpu.setA(cpu.getD());
+        instructions[0X7B] = cpu -> cpu.setA(cpu.getE());
+        instructions[0X7C] = cpu -> cpu.setA(cpu.getH());
+        instructions[0X7D] = cpu -> cpu.setA(cpu.getL());
+        instructions[0X7E] = cpu -> cpu.setA(cpu.readByte(cpu.getHL()));
+        instructions[0X7F] = cpu -> cpu.setA(cpu.getA());
+        instructions[0X80] = new ADD(CPU::getA, CPU::getB, CPU::setA);
+        instructions[0X81] = new ADD(CPU::getA, CPU::getC, CPU::setA);
+        instructions[0X82] = new ADD(CPU::getA, CPU::getD, CPU::setA);
+        instructions[0X83] = new ADD(CPU::getA, CPU::getE, CPU::setA);
+        instructions[0X84] = new ADD(CPU::getA, CPU::getH, CPU::setA);
+        instructions[0X85] = new ADD(CPU::getA, CPU::getL, CPU::setA);
+        instructions[0X86] = new ADD(CPU::getA, CPU::readHL, CPU::setA);
+        instructions[0X87] = new ADD(CPU::getA, CPU::getA, CPU::setA);
+        instructions[0X88] = new ADC(CPU::getA, CPU::getB, CPU::setA);
+        instructions[0X89] = new ADC(CPU::getA, CPU::getC, CPU::setA);
+        instructions[0X8A] = new ADC(CPU::getA, CPU::getD, CPU::setA);
+        instructions[0X8B] = new ADC(CPU::getA, CPU::getE, CPU::setA);
+        instructions[0X8C] = new ADC(CPU::getA, CPU::getH, CPU::setA);
+        instructions[0X8D] = new ADC(CPU::getA, CPU::getL, CPU::setA);
+        instructions[0X8E] = new ADC(CPU::getA, CPU::readHL, CPU::setA);
+        instructions[0X8F] = new ADC(CPU::getA, CPU::getA, CPU::setA);
         // SUB B
-        instructions[0x90] = new ByteSubtractionInstruction(CPU::getA, CPU::getB, CPU::setA);
-        instructions[0X91] = nop;
-        instructions[0X92] = nop;
-        instructions[0X93] = nop;
-        instructions[0X94] = nop;
-        instructions[0X95] = nop;
-        instructions[0X96] = nop;
-        instructions[0X97] = nop;
-        instructions[0X98] = nop;
-        instructions[0X99] = nop;
-        instructions[0X9A] = nop;
-        instructions[0X9B] = nop;
-        instructions[0X9C] = nop;
-        instructions[0X9D] = nop;
-        instructions[0X9E] = nop;
-        instructions[0X9F] = nop;
-        instructions[0XA0] = nop;
-        instructions[0XA1] = nop;
-        instructions[0XA2] = nop;
-        instructions[0XA3] = nop;
-        instructions[0XA4] = nop;
-        instructions[0XA5] = nop;
-        instructions[0XA6] = nop;
-        instructions[0XA7] = nop;
-        instructions[0XA8] = nop;
-        instructions[0XA9] = nop;
-        instructions[0XAA] = nop;
-        instructions[0XAB] = nop;
-        instructions[0XAC] = nop;
-        instructions[0XAD] = nop;
-        instructions[0XAE] = nop;
-        // XOR A
-        instructions[0xAF] = new XorInstruction(CPU::getA, CPU::getA, CPU::setA);
-        instructions[0XB0] = nop;
-        instructions[0XB1] = nop;
-        instructions[0XB2] = nop;
-        instructions[0XB3] = nop;
-        instructions[0XB4] = nop;
-        instructions[0XB5] = nop;
-        instructions[0XB6] = nop;
-        instructions[0XB7] = nop;
-        instructions[0XB8] = nop;
-        instructions[0XB9] = nop;
-        instructions[0XBA] = nop;
-        instructions[0XBB] = nop;
-        instructions[0XBC] = nop;
-        instructions[0XBD] = nop;
-        instructions[0XBE] = nop;
-        instructions[0XBF] = nop;
-        instructions[0XC0] = nop;
-        instructions[0XC1] = nop;
-        instructions[0XC2] = nop;
-        // JP a16
-        instructions[0xC3] = cpu -> cpu.setPC(cpu.nextChar());
-        instructions[0XC4] = nop;
-        instructions[0XC5] = nop;
-        instructions[0XC6] = nop;
-        instructions[0XC7] = nop;
-        instructions[0XC8] = nop;
-        instructions[0XC9] = nop;
-        instructions[0XCA] = nop;
+        instructions[0x90] = new SUB(CPU::getA, CPU::getB, CPU::setA);
+        instructions[0X91] = new SUB(CPU::getA, CPU::getC, CPU::setA);
+        instructions[0X92] = new SUB(CPU::getA, CPU::getD, CPU::setA);
+        instructions[0X93] = new SUB(CPU::getA, CPU::getE, CPU::setA);
+        instructions[0X94] = new SUB(CPU::getA, CPU::getH, CPU::setA);
+        instructions[0X95] = new SUB(CPU::getA, CPU::getL, CPU::setA);
+        instructions[0X96] = new SUB(CPU::getA, CPU::readHL, CPU::setA);
+        instructions[0X97] = new SUB(CPU::getA, CPU::getA, CPU::setA);
+        instructions[0X98] = new SBC(CPU::getA, CPU::getB, CPU::setA);
+        instructions[0X99] = new SBC(CPU::getA, CPU::getC, CPU::setA);
+        instructions[0X9A] = new SBC(CPU::getA, CPU::getD, CPU::setA);
+        instructions[0X9B] = new SBC(CPU::getA, CPU::getE, CPU::setA);
+        instructions[0X9C] = new SBC(CPU::getA, CPU::getH, CPU::setA);
+        instructions[0X9D] = new SBC(CPU::getA, CPU::getL, CPU::setA);
+        instructions[0X9E] = new SBC(CPU::getA, CPU::readHL, CPU::setA);
+        instructions[0X9F] = new SBC(CPU::getA, CPU::getA, CPU::setA);
+        instructions[0XA0] = new AND(CPU::getA, CPU::getB, CPU::setA);
+        instructions[0XA1] = new AND(CPU::getA, CPU::getC, CPU::setA);
+        instructions[0XA2] = new AND(CPU::getA, CPU::getD, CPU::setA);
+        instructions[0XA3] = new AND(CPU::getA, CPU::getE, CPU::setA);
+        instructions[0XA4] = new AND(CPU::getA, CPU::getH, CPU::setA);
+        instructions[0XA5] = new AND(CPU::getA, CPU::getL, CPU::setA);
+        instructions[0XA6] = new AND(CPU::getA, CPU::readHL, CPU::setA);
+        instructions[0XA7] = new AND(CPU::getA, CPU::getA, CPU::setA);
+        instructions[0XA8] = new XOR(CPU::getA, CPU::getB, CPU::setA);
+        instructions[0XA9] = new XOR(CPU::getA, CPU::getC, CPU::setA);
+        instructions[0XAA] = new XOR(CPU::getA, CPU::getD, CPU::setA);
+        instructions[0XAB] = new XOR(CPU::getA, CPU::getE, CPU::setA);
+        instructions[0XAC] = new XOR(CPU::getA, CPU::getH, CPU::setA);
+        instructions[0XAD] = new XOR(CPU::getA, CPU::getL, CPU::setA);
+        instructions[0XAE] = new XOR(CPU::getA, CPU::readHL, CPU::setA);
+        instructions[0xAF] = new XOR(CPU::getA, CPU::getA, CPU::setA);
+        instructions[0XB0] = new OR(CPU::getA, CPU::getB, CPU::setA);
+        instructions[0XB1] = new OR(CPU::getA, CPU::getC, CPU::setA);
+        instructions[0XB2] = new OR(CPU::getA, CPU::getD, CPU::setA);
+        instructions[0XB3] = new OR(CPU::getA, CPU::getE, CPU::setA);
+        instructions[0XB4] = new OR(CPU::getA, CPU::getH, CPU::setA);
+        instructions[0XB5] = new OR(CPU::getA, CPU::getL, CPU::setA);
+        instructions[0XB6] = new OR(CPU::getA, CPU::readHL, CPU::setA);
+        instructions[0XB7] = new OR(CPU::getA, CPU::getA, CPU::setA);
+        instructions[0XB8] = new SUB(CPU::getA, CPU::getB, (cpu, value) -> {});
+        instructions[0XB9] = new SUB(CPU::getA, CPU::getC, (cpu, value) -> {});
+        instructions[0XBA] = new SUB(CPU::getA, CPU::getD, (cpu, value) -> {});
+        instructions[0XBB] = new SUB(CPU::getA, CPU::getE, (cpu, value) -> {});
+        instructions[0XBC] = new SUB(CPU::getA, CPU::getH, (cpu, value) -> {});
+        instructions[0XBD] = new SUB(CPU::getA, CPU::getL, (cpu, value) -> {});
+        instructions[0XBE] = new SUB(CPU::getA, CPU::readHL, (cpu, value) -> {});
+        instructions[0XBF] = new SUB(CPU::getA, CPU::getB, (cpu, value) -> {});
+        instructions[0XC0] = new RET(cpu -> !cpu.isZero());
+        instructions[0XC1] = new POP(CPU::setBC);
+        instructions[0XC2] = new JP(CPU::nextChar, cpu -> !cpu.isZero());
+        instructions[0xC3] = new JP(CPU::nextChar, cpu -> true);
+        instructions[0XC4] = new CALL(cpu -> !cpu.isZero());
+        instructions[0XC5] = new PUSH(CPU::getBC);
+        instructions[0XC6] = new ADD(CPU::getA, CPU::nextByte, CPU::setA);
+        instructions[0XC7] = new RST((byte) 0x00);
+        instructions[0XC8] = new RET(CPU::isZero);
+        instructions[0XC9] = new RET(cpu -> true);
+        instructions[0XCA] = new JP(CPU::nextChar, CPU::isZero);
         instructions[0XCB] = CBInstructions::next;
-        instructions[0XCC] = nop;
-        instructions[0XCD] = new CallInstruction(() -> true);
-        instructions[0XCE] = nop;
-        instructions[0XCF] = nop;
-        instructions[0XD0] = nop;
-        instructions[0XD1] = nop;
-        instructions[0XD2] = nop;
+        instructions[0XCC] = new CALL(CPU::isZero);
+        instructions[0XCD] = new CALL(cpu -> true);
+        instructions[0XCE] = new ADC(CPU::getA, CPU::nextByte, CPU::setA);
+        instructions[0XCF] = new RST((byte) 0x08);
+        instructions[0XD0] = new RET(cpu -> !cpu.isCarry());
+        instructions[0XD1] = new POP(CPU::setDE);
+        instructions[0XD2] = new JP(CPU::nextChar, cpu -> !cpu.isCarry());
         instructions[0XD3] = nop;
-        instructions[0XD4] = nop;
-        instructions[0XD5] = nop;
-        instructions[0XD6] = nop;
-        instructions[0XD7] = nop;
-        instructions[0XD8] = nop;
-        instructions[0XD9] = nop;
-        instructions[0XDA] = nop;
+        instructions[0XD4] = new CALL(cpu -> !cpu.isCarry());
+        instructions[0XD5] = new PUSH(CPU::getDE);
+        instructions[0XD6] = new SUB(CPU::getA, CPU::nextByte, CPU::setA);
+        instructions[0XD7] = new RST((byte) 0x10);
+        instructions[0XD8] = new RET(CPU::isCarry);
+        instructions[0XD9] = new RET(cpu -> {
+            cpu.setInterruptEnabled(false);
+            return true;
+        });
+        instructions[0XDA] = new JP(CPU::nextChar, CPU::isCarry);
         instructions[0XDB] = nop;
-        instructions[0XDC] = nop;
+        instructions[0XDC] = new CALL(CPU::isCarry);
         instructions[0XDD] = nop;
-        instructions[0XDE] = nop;
-        instructions[0XDF] = nop;
-        // LD (a16), A
+        instructions[0XDE] = new SBC(CPU::getA, CPU::nextByte, CPU::setA);
+        instructions[0XDF] = new RST((byte) 0x18);
         instructions[0xE0] = cpu -> {
             byte b = cpu.nextByte();
             int i = 0xFF00 + (0xFF & b);
             char address = (char) i;
             cpu.writeByte(address, cpu.getA());
         };
-        instructions[0XE1] = nop;
-        instructions[0XE2] = nop;
+        instructions[0XE1] = new POP(CPU::setHL);
+        instructions[0XE2] = cpu -> cpu.writeByte((char) (0xff00 + (cpu.getC() & 0xff)), cpu.getA());
         instructions[0XE3] = nop;
         instructions[0XE4] = nop;
-        instructions[0XE5] = nop;
-        instructions[0XE6] = nop;
-        instructions[0XE7] = nop;
-        instructions[0XE8] = nop;
-        instructions[0XE9] = nop;
+        instructions[0XE5] = new PUSH(CPU::getHL);
+        instructions[0XE6] = new AND(CPU::getA, CPU::nextByte, CPU::setA);
+        instructions[0XE7] = new RST((byte) 0x20);
+        instructions[0XE8] = new ADDChar(CPU::getSP, cpu -> (char) cpu.nextByte(), CPU::setSP) {
+            @Override
+            public void setZ(CPU cpu, Character result)
+            {
+                cpu.setZero(false);
+            }
+        };
+        instructions[0XE9] = new JP(CPU::getHL, cpu -> true);
         // LD (a16), A
         instructions[0xEA] = cpu -> cpu.writeByte(cpu.nextChar(), cpu.getA());
         instructions[0XEB] = nop;
         instructions[0XEC] = nop;
         instructions[0XED] = nop;
         instructions[0XEE] = nop;
-        instructions[0XEF] = nop;
+        instructions[0XEF] = new RST((byte) 0x28);
         instructions[0XF0] = cpu -> cpu.setA(cpu.readByte((char) (0xFF00 + 0xFF & cpu.nextByte())));
-        instructions[0XF1] = nop;
+        instructions[0XF1] = new POP((cpu, character) -> {
+            cpu.setA((byte) (((character & 0xff00) >> 8) & 0xff));
+            cpu.setZero((character & 0x80) == 0x80);
+            cpu.setSubtraction((character & 0x70) == 0x70);
+            cpu.setHalfCarry((character & 0x60) == 0x60);
+            cpu.setCarry((character & 0x50) == 0x50);
+        });
         instructions[0XF2] = nop;
         // DI
         instructions[0xF3] = cpu -> cpu.setInterruptEnabled(false);
         instructions[0XF4] = nop;
-        instructions[0XF5] = nop;
+        instructions[0XF5] = new PUSH((cpu) -> {
+            int af = cpu.isZero() ? 0x80 : 0;
+            af |= cpu.isSubtraction() ? 0x70 : 0;
+            af |= cpu.isHalfCarry() ? 0x60 : 0;
+            af |= cpu.isCarry() ? 0x50 : 0;
+            af |= cpu.getA() << 8;
+            return (char) af;
+        });
         instructions[0XF6] = nop;
-        instructions[0XF7] = nop;
+        instructions[0XF7] = new RST((byte) 0x30);
         instructions[0XF8] = nop;
         instructions[0XF9] = nop;
         instructions[0XFA] = nop;
@@ -344,20 +381,24 @@ public class Instructions
         instructions[0XFC] = nop;
         instructions[0XFD] = nop;
         // CP d8
-        instructions[0xFE] = new ByteSubtractionInstruction(CPU::getA, CPU::nextByte, (a, b) -> {});
-        instructions[0XFF] = nop;
+        instructions[0xFE] = new SUB(CPU::getA, CPU::nextByte, (a, b) -> {
+        });
+        instructions[0XFF] = new RST((byte) 0x38);
 
     }
 
 
-
-    public static byte next(CPU cpu) {
+    public static int next(CPU cpu)
+    {
         byte b = cpu.nextByte();
         Instruction instruction = instructions[b & 0xFF];
-        if (instruction != nop) {
+        if (instruction != nop)
+        {
 //            log.info("Executing instruction: {} using {}", String.format("%02X", b), instruction);
             instruction.accept(cpu);
-        } else {
+        }
+        else
+        {
             System.out.printf("%02X%n", b);
         }
         return b;

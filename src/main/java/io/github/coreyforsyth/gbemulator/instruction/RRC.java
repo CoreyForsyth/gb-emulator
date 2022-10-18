@@ -20,10 +20,10 @@ public class RRC implements Instruction
     public void accept(CPU cpu)
     {
         int value = getter.apply(cpu);
-        cpu.clearFlags();
-        boolean carry = (value & 0x01) == value;
-        cpu.setCarry(carry);
+        boolean carry = (value & 0x01) == 0x01;
         value = (value >> 1) | (carry ? 0x80 : 0);
+        cpu.clearFlags();
+        cpu.setCarry(carry);
         cpu.setZero(value == 0);
         setter.accept(cpu, (byte) value);
     }

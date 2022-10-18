@@ -25,6 +25,10 @@ public abstract class ByteCarryInstruction extends FlagInstruction<Byte>
     @Override
     public void setCy(CPU cpu, int result, Byte a, Byte b)
     {
-        cpu.setCarry((result & 0x100) == 0x100);
+        if (cpu.isSubtraction()) {
+            cpu.setCarry(result < 0);
+        } else {
+            cpu.setCarry((result & 0x100) == 0x100);
+        }
     }
 }

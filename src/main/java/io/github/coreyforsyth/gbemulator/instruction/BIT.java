@@ -3,15 +3,15 @@ package io.github.coreyforsyth.gbemulator.instruction;
 import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.Function;
 
-public class TestBit implements Instruction
+public class BIT implements Instruction
 {
 
     private final byte testMask;
     private final Function<CPU, Byte> getter;
 
-    public TestBit(int count, Function<CPU, Byte> getter)
+    public BIT(int index, Function<CPU, Byte> getter)
     {
-        this.testMask = (byte) (1 << count);
+        this.testMask = (byte) (1 << index);
         this.getter = getter;
     }
 

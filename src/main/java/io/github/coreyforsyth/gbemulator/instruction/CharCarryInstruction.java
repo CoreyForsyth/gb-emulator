@@ -27,6 +27,10 @@ public abstract class CharCarryInstruction extends FlagInstruction<Character>
     @Override
     public void setCy(CPU cpu, int result, Character a, Character b)
     {
-        cpu.setCarry((result & 0x10000) == 0x10000);
+        if (cpu.isSubtraction()) {
+            cpu.setCarry(result < 0);
+        } else {
+            cpu.setCarry((result & 0x10000) == 0x10000);
+        }
     }
 }

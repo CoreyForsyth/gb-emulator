@@ -4,10 +4,10 @@ import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class CharAdditionInstruction extends CharCarryInstruction
+public class ADDChar extends CharCarryInstruction
 {
 
-    public CharAdditionInstruction(Function<CPU, Character> a, Function<CPU, Character> b, BiConsumer<CPU, Character> setter)
+    public ADDChar(Function<CPU, Character> a, Function<CPU, Character> b, BiConsumer<CPU, Character> setter)
     {
         super(a, b, setter);
     }

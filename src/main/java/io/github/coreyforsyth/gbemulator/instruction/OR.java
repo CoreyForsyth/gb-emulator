@@ -4,9 +4,9 @@ import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class OrInstruction extends FlagInstruction<Byte>
+public class OR extends ByteNoCarryInstruction
 {
-    public OrInstruction(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+    public OR(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
     {
         super(a, b, setter);
     }
@@ -15,11 +15,5 @@ public class OrInstruction extends FlagInstruction<Byte>
     public int applyOperation(CPU cpu, Byte a, Byte b)
     {
         return a | b;
-    }
-
-    @Override
-    public Byte castResult(int result)
-    {
-        return (byte) result;
     }
 }

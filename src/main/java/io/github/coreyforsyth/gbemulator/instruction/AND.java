@@ -4,10 +4,9 @@ import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class ADCInstruction extends ByteCarryInstruction
+public class AND extends ByteNoCarryInstruction
 {
-
-    public ADCInstruction(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+    public AND(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
     {
         super(a, b, setter);
     }
@@ -15,6 +14,12 @@ public class ADCInstruction extends ByteCarryInstruction
     @Override
     public int applyOperation(CPU cpu, Byte a, Byte b)
     {
-        return a + b + (cpu.isCarry() ? 1 : 0);
+        return a & b;
+    }
+
+    @Override
+    public void setHC(CPU cpu, Byte result, Byte a, Byte b)
+    {
+        cpu.setHalfCarry(true);
     }
 }

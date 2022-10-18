@@ -4,9 +4,10 @@ import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class XorInstruction extends FlagInstruction<Byte>
+public class ADC extends ByteCarryInstruction
 {
-    public XorInstruction(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+
+    public ADC(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
     {
         super(a, b, setter);
     }
@@ -14,12 +15,6 @@ public class XorInstruction extends FlagInstruction<Byte>
     @Override
     public int applyOperation(CPU cpu, Byte a, Byte b)
     {
-        return a ^ b;
-    }
-
-    @Override
-    public Byte castResult(int result)
-    {
-        return (byte) result;
+        return a + b + (cpu.isCarry() ? 1 : 0);
     }
 }
