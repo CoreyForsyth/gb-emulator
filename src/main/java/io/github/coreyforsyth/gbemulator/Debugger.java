@@ -2,14 +2,15 @@ package io.github.coreyforsyth.gbemulator;
 
 import io.github.coreyforsyth.gbemulator.graphics.ScreenPanel;
 import io.github.coreyforsyth.gbemulator.instruction.Instructions;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.miginfocom.swing.MigLayout;
@@ -55,11 +56,11 @@ public class Debugger extends JFrame
         });
 
 
-        JTextField instructionCount = new JTextField("1");
+		SpinnerNumberModel model = new SpinnerNumberModel(100, 1, 10000, 1);
+		JSpinner instructionCount = new JSpinner(model);
         JButton skipInstruction = new JButton("Next n");
         skipInstruction.addActionListener(a -> {
-            int count = Integer.parseInt(instructionCount.getText());
-            executeInstructions(cpu, count);
+            executeInstructions(cpu, model.getNumber().intValue());
             updateRegisterValues();
         });
 
@@ -70,7 +71,7 @@ public class Debugger extends JFrame
             executeUntilNextOccurence(cpu, opcode);
             updateRegisterValues();
         });
-        ScreenPanel screenPanel = new ScreenPanel();
+        ScreenPanel screenPanel = new ScreenPanel(cpu);
 
         JButton aButton = new JButton(" A");
         a = new JTextField();
@@ -93,10 +94,19 @@ public class Debugger extends JFrame
         JButton pcButton = new JButton("PC");
         pc = new JTextField();
         nextInst = new JTextField();
+		JButton updateScreen = new JButton("Update Screen");
+		updateScreen.addActionListener(l -> {
+			screenPanel.update();
+		});
+		JCheckBox debug = new JCheckBox("Debug");
+		debug.addChangeListener(l -> {
+			boolean selected = debug.isSelected();
+			cpu.setDebug(selected);
+		});
 
         jPanel.add(romSelect, "skip");
         jPanel.add(nextInstruction);
-        jPanel.add(screenPanel, "skip, span 1 9");
+        jPanel.add(screenPanel, "skip, span 1 10");
         jPanel.add(instructionCount, "skip");
         jPanel.add(skipInstruction, "wrap");
         jPanel.add(nextOpcode, "skip");
@@ -124,6 +134,8 @@ public class Debugger extends JFrame
         jPanel.add(pcButton);
         jPanel.add(pc, "span 2, growx");
         jPanel.add(nextInst);
+		jPanel.add(updateScreen);
+		jPanel.add(debug);
 
 
         this.setContentPane(jPanel);

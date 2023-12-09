@@ -325,7 +325,7 @@ public class Instructions
         instructions[0XDF] = new RST((byte) 0x18);
         instructions[0xE0] = cpu -> {
             byte b = cpu.nextByte();
-            int i = 0xFF00 + (0xFF & b);
+            int i = 0xFF00 | (0xFF & b);
             char address = (char) i;
             cpu.writeByte(address, cpu.getA());
         };
@@ -351,7 +351,11 @@ public class Instructions
         instructions[0XED] = nop;
         instructions[0XEE] = nop;
         instructions[0XEF] = new RST((byte) 0x28);
-        instructions[0XF0] = cpu -> cpu.setA(cpu.readByte((char) (0xFF00 + 0xFF & cpu.nextByte())));
+        instructions[0XF0] = cpu -> {
+            byte b = cpu.nextByte();
+            int i = 0xFF00 | (0xFF & b);
+            cpu.setA(cpu.readByte((char) i));
+        };
         instructions[0XF1] = new POP((cpu, character) -> {
             cpu.setA((byte) (((character & 0xff00) >> 8) & 0xff));
             cpu.setZero((character & 0x80) == 0x80);
@@ -394,8 +398,14 @@ public class Instructions
         Instruction instruction = instructions[b & 0xFF];
         if (instruction != nop)
         {
+			if (cpu.isDebug()) {
+				instruction.debug(cpu, b);
+			} else {
+
+				instruction.accept(cpu);
+			}
+
 //            log.info("Executing instruction: {} using {}", String.format("%02X", b), instruction);
-            instruction.accept(cpu);
         }
         else
         {

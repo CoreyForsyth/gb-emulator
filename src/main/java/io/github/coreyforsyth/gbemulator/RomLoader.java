@@ -3,10 +3,13 @@ package io.github.coreyforsyth.gbemulator;
 import io.github.coreyforsyth.gbemulator.memory.ExternalRam;
 import io.github.coreyforsyth.gbemulator.memory.HRam;
 import io.github.coreyforsyth.gbemulator.memory.Cartridge;
+import io.github.coreyforsyth.gbemulator.memory.IO;
+import io.github.coreyforsyth.gbemulator.memory.VRam;
 import io.github.coreyforsyth.gbemulator.memory.WorkRam;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class RomLoader
 {
@@ -22,7 +25,7 @@ public class RomLoader
             throw new RuntimeException(e);
         }
         Cartridge cartridge = new Cartridge(data);
-        CPU cpu = new CPU(cartridge, new WorkRam(), new HRam());
+        CPU cpu = new CPU(cartridge, new WorkRam(), new HRam(), new VRam(), new IO());
         cpu.setA((byte) 0x01);
 //        cpu.setF((byte) 0x80);
         cpu.setZero(true);
@@ -37,22 +40,34 @@ public class RomLoader
         cpu.setL((byte) 0x4D);
         cpu.setPC((char) 0x0100);
         cpu.setSP((char) 0xFFFE);
-//        for (int i = 0; i < 50; i++)
-//        {
-//            for (int j = 0; j < 16; j++)
-//            {
-////                System.out.format("%02X ", cpu.nextByte());
-//
-////                byte high = (byte) (rom.read((char) (i * 16 + j)) & 0xFF);
-////                byte low = (byte) (rom.read((char) (i * 16 + j + 1)) & 0xFF);
-////                int i1 = high << 8 & low & 0xFF;
-//////                System.out.format("%02X %02X ", high, low);
-////                System.out.format("%04X ", ((high << 8) & 0xFFFF) | (low & 0xFFFF));
-//////                byte high = rom.read((char) (i * 16 + j));
-//////                System.out.print((char) high);
-//            }
-//            System.out.println();
-//        }
+		addDefaultScreen(cpu);
         return cpu;
     }
+
+	public static void addDefaultScreen(CPU cpu) {
+		try
+		{
+			byte[] bytes = Files.readAllBytes(Path.of("src/main/resources/intro_frame_export"));
+			System.out.println(bytes.length);
+			if (bytes.length >= 0x2000) {
+				for (int i = 0x8000; i < 0xA000; i++)
+				{
+					int j = i - 0x8000;
+					int value = bytes[j];
+					cpu.writeByte((char) i, (byte) value);
+				}
+			}
+		}
+		catch (IOException e)
+		{
+			throw new RuntimeException(e);
+		}
+//		int[] values = new int[]{0xFF, 0x00, 0x7E, 0xFF, 0x85, 0x81, 0x89, 0x83, 0x93, 0x85, 0xA5, 0x8B, 0xC9, 0x97, 0x7E, 0xFF};
+//		for (int i = 0x8000; i < 0xA000; i++)
+//		{
+//			int j = i % 16;
+//			int value = values[j];
+//			cpu.writeByte((char) i, (byte) value);
+//		}
+	}
 }
