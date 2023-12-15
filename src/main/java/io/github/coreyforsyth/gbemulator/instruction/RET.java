@@ -18,10 +18,10 @@ public class RET implements Instruction
         if (call.test(cpu))
         {
             char sp = cpu.getSP();
-            byte pcLower = cpu.readByte(sp++);
-            byte pcHigher = cpu.readByte(sp++);
+            byte pcLower = cpu.cpuReadByte(sp++);
+            byte pcHigher = cpu.cpuReadByte(sp++);
             cpu.setSP(sp);
-            cpu.setPC((char) (pcHigher << 8 | pcLower));
+            cpu.setPC((char) (pcHigher << 8 | (pcLower & 0xFF)));
         }
     }
 }

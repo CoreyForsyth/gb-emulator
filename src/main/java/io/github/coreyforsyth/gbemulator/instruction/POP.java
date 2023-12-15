@@ -17,8 +17,8 @@ public class POP implements Instruction
     public void accept(CPU cpu)
     {
         char sp = cpu.getSP();
-        byte lower = cpu.readByte(sp++);
-        byte higher = cpu.readByte(sp++);
+        byte lower = cpu.cpuReadByte(sp++);
+        byte higher = cpu.cpuReadByte(sp++);
         setter.accept(cpu, (char) ((higher & 0xFF) << 8 | (lower & 0xFF)));
         cpu.setSP(sp);
     }

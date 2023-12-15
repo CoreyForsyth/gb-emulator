@@ -22,7 +22,7 @@ public class Cartridge implements ReadWrite
         if (sp < 0x4000) {
             return sp;
         }
-        return sp + romBank * 0x4000;
+        return sp + (romBank - 1) * 0x4000;
     }
 
     public int getRamOffset(int sp) {
@@ -66,7 +66,12 @@ public class Cartridge implements ReadWrite
                 ramRtcEnabled = false;
             }
         }  else if (address < 0x4000) {
-            romBank = value & 0x7f;
+			int newRomBank = value & 0x7f;
+			if (newRomBank == 0) {
+				newRomBank = 1;
+			}
+			System.out.println("New rom address: " + newRomBank);
+			romBank = newRomBank;
         } else if (address < 0x6000) {
             if ((value & 0x03) == value) {
                 ramBank = value;

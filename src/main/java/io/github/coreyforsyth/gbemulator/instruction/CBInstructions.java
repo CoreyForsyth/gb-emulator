@@ -145,7 +145,7 @@ public class CBInstructions
         instructions[0x83] = cpu -> cpu.setE((byte) (cpu.getE() & 0b11111110));
         instructions[0x84] = cpu -> cpu.setH((byte) (cpu.getH() & 0b11111110));
         instructions[0x85] = cpu -> cpu.setL((byte) (cpu.getL() & 0b11111110));
-        instructions[0x86] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b11111110));
+        instructions[0x86] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b11111110));
         instructions[0x87] = cpu -> cpu.setA((byte) (cpu.getA() & 0b11111101));
         instructions[0x88] = cpu -> cpu.setB((byte) (cpu.getB() & 0b11111101));
         instructions[0x89] = cpu -> cpu.setC((byte) (cpu.getC() & 0b11111101));
@@ -153,7 +153,7 @@ public class CBInstructions
         instructions[0x8B] = cpu -> cpu.setE((byte) (cpu.getE() & 0b11111101));
         instructions[0x8C] = cpu -> cpu.setH((byte) (cpu.getH() & 0b11111101));
         instructions[0x8D] = cpu -> cpu.setL((byte) (cpu.getL() & 0b11111101));
-        instructions[0x8E] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b11111101));
+        instructions[0x8E] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b11111101));
         instructions[0x8F] = cpu -> cpu.setA((byte) (cpu.getA() & 0b11111101));
         instructions[0x90] = cpu -> cpu.setB((byte) (cpu.getB() & 0b11111011));
         instructions[0x91] = cpu -> cpu.setC((byte) (cpu.getC() & 0b11111011));
@@ -161,7 +161,7 @@ public class CBInstructions
         instructions[0x93] = cpu -> cpu.setE((byte) (cpu.getE() & 0b11111011));
         instructions[0x94] = cpu -> cpu.setH((byte) (cpu.getH() & 0b11111011));
         instructions[0x95] = cpu -> cpu.setL((byte) (cpu.getL() & 0b11111011));
-        instructions[0x96] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b11111011));
+        instructions[0x96] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b11111011));
         instructions[0x97] = cpu -> cpu.setA((byte) (cpu.getA() & 0b11111011));
         instructions[0x98] = cpu -> cpu.setB((byte) (cpu.getB() & 0b11110111));
         instructions[0x99] = cpu -> cpu.setC((byte) (cpu.getC() & 0b11110111));
@@ -169,7 +169,7 @@ public class CBInstructions
         instructions[0x9B] = cpu -> cpu.setE((byte) (cpu.getE() & 0b11110111));
         instructions[0x9C] = cpu -> cpu.setH((byte) (cpu.getH() & 0b11110111));
         instructions[0x9D] = cpu -> cpu.setL((byte) (cpu.getL() & 0b11110111));
-        instructions[0x9E] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b11110111));
+        instructions[0x9E] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b11110111));
         instructions[0x9F] = cpu -> cpu.setA((byte) (cpu.getA() & 0b11110111));
         instructions[0xA0] = cpu -> cpu.setB((byte) (cpu.getB() & 0b11101111));
         instructions[0xA1] = cpu -> cpu.setC((byte) (cpu.getC() & 0b11101111));
@@ -177,7 +177,7 @@ public class CBInstructions
         instructions[0xA3] = cpu -> cpu.setE((byte) (cpu.getE() & 0b11101111));
         instructions[0xA4] = cpu -> cpu.setH((byte) (cpu.getH() & 0b11101111));
         instructions[0xA5] = cpu -> cpu.setL((byte) (cpu.getL() & 0b11101111));
-        instructions[0xA6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b11101111));
+        instructions[0xA6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b11101111));
         instructions[0xA7] = cpu -> cpu.setA((byte) (cpu.getA() & 0b11101111));
         instructions[0xA8] = cpu -> cpu.setB((byte) (cpu.getB() & 0b11011111));
         instructions[0xA9] = cpu -> cpu.setC((byte) (cpu.getC() & 0b11011111));
@@ -185,7 +185,7 @@ public class CBInstructions
         instructions[0xAB] = cpu -> cpu.setE((byte) (cpu.getE() & 0b11011111));
         instructions[0xAC] = cpu -> cpu.setH((byte) (cpu.getH() & 0b11011111));
         instructions[0xAD] = cpu -> cpu.setL((byte) (cpu.getL() & 0b11011111));
-        instructions[0xAE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b11011111));
+        instructions[0xAE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b11011111));
         instructions[0xAF] = cpu -> cpu.setA((byte) (cpu.getA() & 0b11011111));
         instructions[0xB0] = cpu -> cpu.setB((byte) (cpu.getB() & 0b10111111));
         instructions[0xB1] = cpu -> cpu.setC((byte) (cpu.getC() & 0b10111111));
@@ -193,7 +193,7 @@ public class CBInstructions
         instructions[0xB3] = cpu -> cpu.setE((byte) (cpu.getE() & 0b10111111));
         instructions[0xB4] = cpu -> cpu.setH((byte) (cpu.getH() & 0b10111111));
         instructions[0xB5] = cpu -> cpu.setL((byte) (cpu.getL() & 0b10111111));
-        instructions[0xB6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b10111111));
+        instructions[0xB6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b10111111));
         instructions[0xB7] = cpu -> cpu.setA((byte) (cpu.getA() & 0b10111111));
         instructions[0xB8] = cpu -> cpu.setB((byte) (cpu.getB() & 0b01111111));
         instructions[0xB9] = cpu -> cpu.setC((byte) (cpu.getC() & 0b01111111));
@@ -201,7 +201,7 @@ public class CBInstructions
         instructions[0xBB] = cpu -> cpu.setE((byte) (cpu.getE() & 0b01111111));
         instructions[0xBC] = cpu -> cpu.setH((byte) (cpu.getH() & 0b01111111));
         instructions[0xBD] = cpu -> cpu.setL((byte) (cpu.getL() & 0b01111111));
-        instructions[0xBE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) & 0b01111111));
+        instructions[0xBE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) & 0b01111111));
         instructions[0xBF] = cpu -> cpu.setA((byte) (cpu.getA() & 0b01111111));
         instructions[0xC0] = cpu -> cpu.setB((byte) (cpu.getB() | 0b00000001));
         instructions[0xC1] = cpu -> cpu.setC((byte) (cpu.getC() | 0b00000001));
@@ -209,7 +209,7 @@ public class CBInstructions
         instructions[0xC3] = cpu -> cpu.setE((byte) (cpu.getE() | 0b00000001));
         instructions[0xC4] = cpu -> cpu.setH((byte) (cpu.getH() | 0b00000001));
         instructions[0xC5] = cpu -> cpu.setL((byte) (cpu.getL() | 0b00000001));
-        instructions[0xC6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) | 0b00000001));
+        instructions[0xC6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) | 0b00000001));
         instructions[0xC7] = cpu -> cpu.setA((byte) (cpu.getA() | 0b00000010));
         instructions[0xC8] = cpu -> cpu.setB((byte) (cpu.getB() | 0b00000010));
         instructions[0xC9] = cpu -> cpu.setC((byte) (cpu.getC() | 0b00000010));
@@ -217,7 +217,7 @@ public class CBInstructions
         instructions[0xCB] = cpu -> cpu.setE((byte) (cpu.getE() | 0b00000010));
         instructions[0xCC] = cpu -> cpu.setH((byte) (cpu.getH() | 0b00000010));
         instructions[0xCD] = cpu -> cpu.setL((byte) (cpu.getL() | 0b00000010));
-        instructions[0xCE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) | 0b00000010));
+        instructions[0xCE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) | 0b00000010));
         instructions[0xCF] = cpu -> cpu.setA((byte) (cpu.getA() | 0b00000010));
         instructions[0xD0] = cpu -> cpu.setB((byte) (cpu.getB() | 0b00000100));
         instructions[0xD1] = cpu -> cpu.setC((byte) (cpu.getC() | 0b00000100));
@@ -225,7 +225,7 @@ public class CBInstructions
         instructions[0xD3] = cpu -> cpu.setE((byte) (cpu.getE() | 0b00000100));
         instructions[0xD4] = cpu -> cpu.setH((byte) (cpu.getH() | 0b00000100));
         instructions[0xD5] = cpu -> cpu.setL((byte) (cpu.getL() | 0b00000100));
-        instructions[0xD6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) | 0b00000100));
+        instructions[0xD6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) | 0b00000100));
         instructions[0xD7] = cpu -> cpu.setA((byte) (cpu.getA() | 0b00000100));
         instructions[0xD8] = cpu -> cpu.setB((byte) (cpu.getB() | 0b00001000));
         instructions[0xD9] = cpu -> cpu.setC((byte) (cpu.getC() | 0b00001000));
@@ -233,7 +233,7 @@ public class CBInstructions
         instructions[0xDB] = cpu -> cpu.setE((byte) (cpu.getE() | 0b00001000));
         instructions[0xDC] = cpu -> cpu.setH((byte) (cpu.getH() | 0b00001000));
         instructions[0xDD] = cpu -> cpu.setL((byte) (cpu.getL() | 0b00001000));
-        instructions[0xDE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) | 0b00001000));
+        instructions[0xDE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) | 0b00001000));
         instructions[0xDF] = cpu -> cpu.setA((byte) (cpu.getA() | 0b00001000));
         instructions[0xE0] = cpu -> cpu.setB((byte) (cpu.getB() | 0b00010000));
         instructions[0xE1] = cpu -> cpu.setC((byte) (cpu.getC() | 0b00010000));
@@ -241,7 +241,7 @@ public class CBInstructions
         instructions[0xE3] = cpu -> cpu.setE((byte) (cpu.getE() | 0b00010000));
         instructions[0xE4] = cpu -> cpu.setH((byte) (cpu.getH() | 0b00010000));
         instructions[0xE5] = cpu -> cpu.setL((byte) (cpu.getL() | 0b00010000));
-        instructions[0xE6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) | 0b00010000));
+        instructions[0xE6] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) | 0b00010000));
         instructions[0xE7] = cpu -> cpu.setA((byte) (cpu.getA() | 0b00010000));
         instructions[0xE8] = cpu -> cpu.setB((byte) (cpu.getB() | 0b00100000));
         instructions[0xE9] = cpu -> cpu.setC((byte) (cpu.getC() | 0b00100000));
@@ -249,7 +249,7 @@ public class CBInstructions
         instructions[0xEB] = cpu -> cpu.setE((byte) (cpu.getE() | 0b00100000));
         instructions[0xEC] = cpu -> cpu.setH((byte) (cpu.getH() | 0b00100000));
         instructions[0xED] = cpu -> cpu.setL((byte) (cpu.getL() | 0b00100000));
-        instructions[0xEE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) | 0b00100000));
+        instructions[0xEE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) | 0b00100000));
         instructions[0xEF] = cpu -> cpu.setA((byte) (cpu.getA() | 0b00100000));
         instructions[0xF0] = cpu -> cpu.setB((byte) (cpu.getB() | 0b01000000));
         instructions[0xF1] = cpu -> cpu.setC((byte) (cpu.getC() | 0b01000000));
@@ -265,7 +265,7 @@ public class CBInstructions
         instructions[0xFB] = cpu -> cpu.setE((byte) (cpu.getE() | 0b10000000));
         instructions[0xFC] = cpu -> cpu.setH((byte) (cpu.getH() | 0b10000000));
         instructions[0xFD] = cpu -> cpu.setL((byte) (cpu.getL() | 0b10000000));
-        instructions[0xFE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.readByte(cpu.getHL()) | 0b10000000));
+        instructions[0xFE] = cpu -> cpu.writeByte(cpu.getHL(), (byte) (cpu.cpuReadByte(cpu.getHL()) | 0b10000000));
         instructions[0xFF] = cpu -> cpu.setA((byte) (cpu.getA() | 0b10000000));
     }
 

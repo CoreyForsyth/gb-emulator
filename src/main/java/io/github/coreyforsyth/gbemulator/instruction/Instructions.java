@@ -1,13 +1,16 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
 import io.github.coreyforsyth.gbemulator.CPU;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class Instructions
 {
 
-    public static Instruction[] instructions;
+    public static final Instruction[] instructions;
+	public static final Instruction[] interruptInstruction;
     private static final Instruction nop = cpu -> {
     };
 
@@ -34,7 +37,7 @@ public class Instructions
             cpu.writeByte((char) (c + 1), (byte) ((cpu.getSP() & 0xFF00) >> 8));
         };
         instructions[0x09] = new ADDChar(CPU::getHL, CPU::getBC, CPU::setHL);
-        instructions[0x0A] = cpu -> cpu.setA(cpu.readByte(cpu.getBC()));
+        instructions[0x0A] = cpu -> cpu.setA(cpu.cpuReadByte(cpu.getBC()));
         instructions[0x0B] = cpu -> cpu.setBC((char) (cpu.getBC() - 1));
         instructions[0x0C] = new INC(CPU::getC, CPU::setC);
         instructions[0x0D] = new DEC(CPU::getC, CPU::setC);
@@ -60,7 +63,7 @@ public class Instructions
         };
         instructions[0x18] = new JR(cpu -> true);
         instructions[0x19] = new ADDChar(CPU::getHL, CPU::getDE, CPU::setHL);
-        instructions[0x1A] = cpu -> cpu.setA(cpu.readByte(cpu.getDE()));
+        instructions[0x1A] = cpu -> cpu.setA(cpu.cpuReadByte(cpu.getDE()));
         instructions[0x1B] = cpu -> cpu.setDE((char) (cpu.getDE() - 1));
         instructions[0x1C] = new INC(CPU::getE, CPU::setE);
         instructions[0x1D] = new DEC(CPU::getE, CPU::setE);
@@ -165,7 +168,7 @@ public class Instructions
         instructions[0X43] = cpu -> cpu.setB(cpu.getE());
         instructions[0X44] = cpu -> cpu.setB(cpu.getH());
         instructions[0X45] = cpu -> cpu.setB(cpu.getL());
-        instructions[0X46] = cpu -> cpu.setB(cpu.readByte(cpu.getHL()));
+        instructions[0X46] = cpu -> cpu.setB(cpu.cpuReadByte(cpu.getHL()));
         instructions[0X47] = cpu -> cpu.setB(cpu.getA());
         instructions[0X48] = cpu -> cpu.setC(cpu.getB());
         instructions[0X49] = cpu -> cpu.setC(cpu.getC());
@@ -173,7 +176,7 @@ public class Instructions
         instructions[0X4B] = cpu -> cpu.setC(cpu.getE());
         instructions[0X4C] = cpu -> cpu.setC(cpu.getH());
         instructions[0X4D] = cpu -> cpu.setC(cpu.getL());
-        instructions[0X4E] = cpu -> cpu.setC(cpu.readByte(cpu.getHL()));
+        instructions[0X4E] = cpu -> cpu.setC(cpu.cpuReadByte(cpu.getHL()));
         instructions[0X4F] = cpu -> cpu.setC(cpu.getA());
         instructions[0X50] = cpu -> cpu.setD(cpu.getB());
         instructions[0X51] = cpu -> cpu.setD(cpu.getC());
@@ -181,7 +184,7 @@ public class Instructions
         instructions[0X53] = cpu -> cpu.setD(cpu.getE());
         instructions[0X54] = cpu -> cpu.setD(cpu.getH());
         instructions[0X55] = cpu -> cpu.setD(cpu.getL());
-        instructions[0X56] = cpu -> cpu.setD(cpu.readByte(cpu.getHL()));
+        instructions[0X56] = cpu -> cpu.setD(cpu.cpuReadByte(cpu.getHL()));
         instructions[0X57] = cpu -> cpu.setD(cpu.getA());
         instructions[0X58] = cpu -> cpu.setE(cpu.getB());
         instructions[0X59] = cpu -> cpu.setE(cpu.getC());
@@ -189,7 +192,7 @@ public class Instructions
         instructions[0X5B] = cpu -> cpu.setE(cpu.getE());
         instructions[0X5C] = cpu -> cpu.setE(cpu.getH());
         instructions[0X5D] = cpu -> cpu.setE(cpu.getL());
-        instructions[0X5E] = cpu -> cpu.setE(cpu.readByte(cpu.getHL()));
+        instructions[0X5E] = cpu -> cpu.setE(cpu.cpuReadByte(cpu.getHL()));
         instructions[0X5F] = cpu -> cpu.setE(cpu.getA());
         instructions[0X60] = cpu -> cpu.setH(cpu.getB());
         instructions[0X61] = cpu -> cpu.setH(cpu.getC());
@@ -197,7 +200,7 @@ public class Instructions
         instructions[0X63] = cpu -> cpu.setH(cpu.getE());
         instructions[0X64] = cpu -> cpu.setH(cpu.getH());
         instructions[0X65] = cpu -> cpu.setH(cpu.getL());
-        instructions[0X66] = cpu -> cpu.setH(cpu.readByte(cpu.getHL()));
+        instructions[0X66] = cpu -> cpu.setH(cpu.cpuReadByte(cpu.getHL()));
         instructions[0X67] = cpu -> cpu.setH(cpu.getA());
         instructions[0X68] = cpu -> cpu.setL(cpu.getB());
         instructions[0X69] = cpu -> cpu.setL(cpu.getC());
@@ -205,7 +208,7 @@ public class Instructions
         instructions[0X6B] = cpu -> cpu.setL(cpu.getE());
         instructions[0X6C] = cpu -> cpu.setL(cpu.getH());
         instructions[0X6D] = cpu -> cpu.setL(cpu.getL());
-        instructions[0X6E] = cpu -> cpu.setL(cpu.readByte(cpu.getHL()));
+        instructions[0X6E] = cpu -> cpu.setL(cpu.cpuReadByte(cpu.getHL()));
         instructions[0X6F] = cpu -> cpu.setL(cpu.getA());
         instructions[0X70] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getB());
         instructions[0X71] = cpu -> cpu.writeByte(cpu.getHL(), cpu.getC());
@@ -221,7 +224,7 @@ public class Instructions
         instructions[0X7B] = cpu -> cpu.setA(cpu.getE());
         instructions[0X7C] = cpu -> cpu.setA(cpu.getH());
         instructions[0X7D] = cpu -> cpu.setA(cpu.getL());
-        instructions[0X7E] = cpu -> cpu.setA(cpu.readByte(cpu.getHL()));
+        instructions[0X7E] = cpu -> cpu.setA(cpu.cpuReadByte(cpu.getHL()));
         instructions[0X7F] = cpu -> cpu.setA(cpu.getA());
         instructions[0X80] = new ADD(CPU::getA, CPU::getB, CPU::setA);
         instructions[0X81] = new ADD(CPU::getA, CPU::getC, CPU::setA);
@@ -292,7 +295,7 @@ public class Instructions
         instructions[0XC1] = new POP(CPU::setBC);
         instructions[0XC2] = new JP(CPU::nextChar, cpu -> !cpu.isZero());
         instructions[0xC3] = new JP(CPU::nextChar, cpu -> true);
-        instructions[0XC4] = new CALL(cpu -> !cpu.isZero());
+        instructions[0XC4] = new CALL(cpu -> !cpu.isZero(), CPU::nextChar);
         instructions[0XC5] = new PUSH(CPU::getBC);
         instructions[0XC6] = new ADD(CPU::getA, CPU::nextByte, CPU::setA);
         instructions[0XC7] = new RST((byte) 0x00);
@@ -300,26 +303,27 @@ public class Instructions
         instructions[0XC9] = new RET(cpu -> true);
         instructions[0XCA] = new JP(CPU::nextChar, CPU::isZero);
         instructions[0XCB] = CBInstructions::next;
-        instructions[0XCC] = new CALL(CPU::isZero);
-        instructions[0XCD] = new CALL(cpu -> true);
+        instructions[0XCC] = new CALL(CPU::isZero, CPU::nextChar);
+        instructions[0XCD] = new CALL(cpu -> true, CPU::nextChar);
         instructions[0XCE] = new ADC(CPU::getA, CPU::nextByte, CPU::setA);
         instructions[0XCF] = new RST((byte) 0x08);
         instructions[0XD0] = new RET(cpu -> !cpu.isCarry());
         instructions[0XD1] = new POP(CPU::setDE);
         instructions[0XD2] = new JP(CPU::nextChar, cpu -> !cpu.isCarry());
         instructions[0XD3] = nop;
-        instructions[0XD4] = new CALL(cpu -> !cpu.isCarry());
+        instructions[0XD4] = new CALL(cpu -> !cpu.isCarry(), CPU::nextChar);
         instructions[0XD5] = new PUSH(CPU::getDE);
         instructions[0XD6] = new SUB(CPU::getA, CPU::nextByte, CPU::setA);
         instructions[0XD7] = new RST((byte) 0x10);
         instructions[0XD8] = new RET(CPU::isCarry);
         instructions[0XD9] = new RET(cpu -> {
+			System.out.println("RETI, turning off IME flag");
             cpu.setInterruptEnabled(false);
             return true;
         });
         instructions[0XDA] = new JP(CPU::nextChar, CPU::isCarry);
         instructions[0XDB] = nop;
-        instructions[0XDC] = new CALL(CPU::isCarry);
+        instructions[0XDC] = new CALL(CPU::isCarry, CPU::nextChar);
         instructions[0XDD] = nop;
         instructions[0XDE] = new SBC(CPU::getA, CPU::nextByte, CPU::setA);
         instructions[0XDF] = new RST((byte) 0x18);
@@ -354,7 +358,7 @@ public class Instructions
         instructions[0XF0] = cpu -> {
             byte b = cpu.nextByte();
             int i = 0xFF00 | (0xFF & b);
-            cpu.setA(cpu.readByte((char) i));
+            cpu.setA(cpu.cpuReadByte((char) i));
         };
         instructions[0XF1] = new POP((cpu, character) -> {
             cpu.setA((byte) (((character & 0xff00) >> 8) & 0xff));
@@ -365,7 +369,10 @@ public class Instructions
         });
         instructions[0XF2] = nop;
         // DI
-        instructions[0xF3] = cpu -> cpu.setInterruptEnabled(false);
+        instructions[0xF3] = cpu -> {
+			System.out.println("DI, turning off IME flag");
+			cpu.setInterruptEnabled(false);
+		};
         instructions[0XF4] = nop;
         instructions[0XF5] = new PUSH((cpu) -> {
             int af = cpu.isZero() ? 0x80 : 0;
@@ -379,9 +386,12 @@ public class Instructions
         instructions[0XF7] = new RST((byte) 0x30);
         instructions[0XF8] = nop;
         instructions[0XF9] = nop;
-        instructions[0XFA] = nop;
+        instructions[0XFA] = cpu -> cpu.setA(cpu.cpuReadByte(cpu.nextChar()));
         // EI
-        instructions[0xFB] = cpu -> cpu.setInterruptEnabled(true);
+        instructions[0xFB] = cpu -> {
+			System.out.println("EI, turning on IME flag");
+			cpu.setInterruptEnabled(true);
+		};
         instructions[0XFC] = nop;
         instructions[0XFD] = nop;
         // CP d8
@@ -389,13 +399,55 @@ public class Instructions
         });
         instructions[0XFF] = new RST((byte) 0x38);
 
+		interruptInstruction = new Instruction[5];
+		interruptInstruction[0] = new CALL((cpu) -> {
+			System.out.println("Executing interrupt 0");
+			return true;
+		}, (cpu) -> (char) 0x40);
+		interruptInstruction[1] = new CALL((cpu) -> {
+			System.out.println("Executing interrupt 1");
+			return true;
+		}, (cpu) -> (char) 0x48);
+		interruptInstruction[2] = new CALL((cpu) -> {
+			System.out.println("Executing interrupt 2");
+			return true;
+		}, (cpu) -> (char) 0x50);
+		interruptInstruction[3] = new CALL((cpu) -> {
+			System.out.println("Executing interrupt 3");
+			return true;
+		}, (cpu) -> (char) 0x58);
+		interruptInstruction[4] = new CALL((cpu) -> {
+			System.out.println("Executing interrupt 4");
+			return true;
+		}, (cpu) -> (char) 0x60);
+
     }
 
 
     public static int next(CPU cpu)
     {
-        byte b = cpu.nextByte();
-        Instruction instruction = instructions[b & 0xFF];
+		// 5A36
+		Instruction instruction;
+		byte b = 0;
+		if (cpu.isInterruptEnabled() && (cpu.getInterruptRegister() & 0x1f) != 0 && (cpu.readByte((char) 0xFF0F) & 0x1F) != 0) {
+			cpu.setInterruptEnabled(false);
+			byte interruptRegister = cpu.getInterruptRegister();
+			if ((interruptRegister & 0x01) != 0) {
+				instruction = interruptInstruction[0];
+			} else if ((interruptRegister & 0x02) != 0) {
+				instruction = interruptInstruction[1];
+			} else if ((interruptRegister & 0x04) != 0) {
+				instruction = interruptInstruction[2];
+			} else if ((interruptRegister & 0x08) != 0) {
+				instruction = interruptInstruction[3];
+			} else {
+				instruction = interruptInstruction[4];
+			}
+		} else {
+			b = cpu.nextByte();
+			instruction = instructions[b & 0xFF];
+		}
+
         if (instruction != nop)
         {
 			if (cpu.isDebug()) {
@@ -409,7 +461,7 @@ public class Instructions
         }
         else
         {
-            System.out.printf("%02X%n", b);
+            System.out.printf("Implement instruction: %02X%n", b);
         }
         return b;
     }

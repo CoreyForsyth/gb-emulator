@@ -2,7 +2,6 @@ package io.github.coreyforsyth.gbemulator.instruction;
 
 import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.Consumer;
-import lombok.extern.slf4j.Slf4j;
 
 public interface Instruction extends Consumer<CPU>{
     Byte ZERO_BYTE = 0;
@@ -13,7 +12,7 @@ public interface Instruction extends Consumer<CPU>{
 		for (int i = 0; i < 10; i++)
 		{
 
-			System.out.printf("%02X", (int) (cpu.readByte((char) (pc + i)) & 0xff));
+			System.out.printf("%02X", cpu.cpuReadByte((char) (pc + i)) & 0xff);
 		}
 		System.out.println();
 

@@ -1,9 +1,10 @@
 package io.github.coreyforsyth.gbemulator;
 
-import io.github.coreyforsyth.gbemulator.memory.ExternalRam;
-import io.github.coreyforsyth.gbemulator.memory.HRam;
+import io.github.coreyforsyth.gbemulator.graphics.Display;
 import io.github.coreyforsyth.gbemulator.memory.Cartridge;
+import io.github.coreyforsyth.gbemulator.memory.HRam;
 import io.github.coreyforsyth.gbemulator.memory.IO;
+import io.github.coreyforsyth.gbemulator.memory.Oam;
 import io.github.coreyforsyth.gbemulator.memory.VRam;
 import io.github.coreyforsyth.gbemulator.memory.WorkRam;
 import java.io.File;
@@ -25,7 +26,10 @@ public class RomLoader
             throw new RuntimeException(e);
         }
         Cartridge cartridge = new Cartridge(data);
-        CPU cpu = new CPU(cartridge, new WorkRam(), new HRam(), new VRam(), new IO());
+		VRam vRam = new VRam();
+		IO io = new IO();
+		Oam oam = new Oam();
+		CPU cpu = new CPU(cartridge, new WorkRam(), new HRam(), vRam, oam, io, new Display(io, vRam, oam));
         cpu.setA((byte) 0x01);
 //        cpu.setF((byte) 0x80);
         cpu.setZero(true);
@@ -47,7 +51,7 @@ public class RomLoader
 	public static void addDefaultScreen(CPU cpu) {
 		try
 		{
-			byte[] bytes = Files.readAllBytes(Path.of("src/main/resources/intro_frame_export"));
+			byte[] bytes = Files.readAllBytes(Path.of("src/main/resources/intro_frame_export_vram"));
 			System.out.println(bytes.length);
 			if (bytes.length >= 0x2000) {
 				for (int i = 0x8000; i < 0xA000; i++)
@@ -62,12 +66,25 @@ public class RomLoader
 		{
 			throw new RuntimeException(e);
 		}
-//		int[] values = new int[]{0xFF, 0x00, 0x7E, 0xFF, 0x85, 0x81, 0x89, 0x83, 0x93, 0x85, 0xA5, 0x8B, 0xC9, 0x97, 0x7E, 0xFF};
-//		for (int i = 0x8000; i < 0xA000; i++)
-//		{
-//			int j = i % 16;
-//			int value = values[j];
-//			cpu.writeByte((char) i, (byte) value);
-//		}
+		try
+		{
+			byte[] bytes = Files.readAllBytes(Path.of("src/main/resources/intro_frame_export_oam"));
+			System.out.println(bytes.length);
+			if (bytes.length >= 0xA0) {
+				for (int i = 0xFE00; i < 0xFEA0; i++)
+				{
+					int j = i - 0xFE00;
+					int value = bytes[j];
+					cpu.writeByte((char) i, (byte) value);
+				}
+			}
+		}
+		catch (IOException e)
+		{
+			throw new RuntimeException(e);
+		}
+		cpu.writeByte((char) 0xFF47, (byte) 0xE4);
+		cpu.writeByte((char) 0xFF48, (byte) 0xE4);
+		cpu.writeByte((char) 0xFF49, (byte) 0xE4);
 	}
 }
