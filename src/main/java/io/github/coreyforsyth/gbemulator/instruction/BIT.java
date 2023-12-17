@@ -1,24 +1,23 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.Function;
 
-public class BIT implements Instruction
+public class BIT extends Instruction<Byte, Void>
 {
 
     private final byte testMask;
-    private final Function<CPU, Byte> getter;
 
-    public BIT(int index, Function<CPU, Byte> getter)
+    public BIT(Accessor<Byte> primary, int index)
     {
+        super(primary, null);
         this.testMask = (byte) (1 << index);
-        this.getter = getter;
     }
 
     @Override
     public void accept(CPU cpu)
     {
-        Byte value = getter.apply(cpu);
+        Byte value = primary.apply(cpu);
         cpu.setZero((value & testMask) != value);
         cpu.setHalfCarry(true);
         cpu.setCarry(false);

@@ -1,15 +1,14 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
-public class ADDChar extends CharCarryInstruction
+public class ADDC extends CharCarryInstruction
 {
 
-    public ADDChar(Function<CPU, Character> a, Function<CPU, Character> b, BiConsumer<CPU, Character> setter)
+    public ADDC(Accessor<Character> primary, Accessor<Character> secondary)
     {
-        super(a, b, setter);
+        super(primary, secondary);
     }
 
     @Override

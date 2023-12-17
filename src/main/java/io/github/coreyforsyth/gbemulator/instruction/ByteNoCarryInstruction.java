@@ -1,14 +1,12 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
-import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
+import io.github.coreyforsyth.gbemulator.Accessor;
 
 public abstract class ByteNoCarryInstruction extends FlagInstruction<Byte>
 {
-    public ByteNoCarryInstruction(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+    public ByteNoCarryInstruction(Accessor<Byte> primary, Accessor<Byte> secondary)
     {
-        super(a, b, setter);
+        super(primary, secondary);
     }
 
     @Override

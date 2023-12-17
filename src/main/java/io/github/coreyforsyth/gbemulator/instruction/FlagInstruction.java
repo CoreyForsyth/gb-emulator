@@ -1,28 +1,27 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import lombok.RequiredArgsConstructor;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @Slf4j
-public abstract class FlagInstruction<T> implements Instruction
+public abstract class FlagInstruction<T> extends Instruction<T, T> implements Consumer<CPU>
 {
 
-    private final Function<CPU, T> a;
-    private final Function<CPU, T> b;
-    private final BiConsumer<CPU, T> setter;
+	public FlagInstruction(Accessor<T> primary, Accessor<T> secondary)
+	{
+        super(primary, secondary);
+	}
 
-    @Override
+	@Override
     public void accept(CPU cpu)
     {
-        T a = this.a.apply(cpu);
-        T b = this.b.apply(cpu);
+        T a = this.primary.apply(cpu);
+        T b = this.secondary.apply(cpu);
         int intResult = applyOperation(cpu, a, b);
         T result = castResult(intResult);
-        setter.accept(cpu, result);
+        primary.accept(cpu, result);
         setZ(cpu, result);
         setS(cpu);
         setHC(cpu, result, a, b);

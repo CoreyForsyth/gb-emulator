@@ -1,26 +1,23 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
-public class JP implements Instruction
+public class JP extends Instruction<Boolean, Character>
 {
+    private final boolean negative;
 
-    private final Function<CPU, Character> getter;
-    private final Predicate<CPU> shouldJump;
-
-    public JP(Function<CPU, Character> getter, Predicate<CPU> shouldJump)
+    public JP(Accessor<Boolean> primary, Accessor<Character> secondary, boolean negative)
     {
-        this.getter = getter;
-        this.shouldJump = shouldJump;
+        super(primary, secondary);
+        this.negative = negative;
     }
 
     @Override
     public void accept(CPU cpu)
     {
-        Character jump = getter.apply(cpu);
-        if (shouldJump.test(cpu)) {
+        Character jump = secondary.apply(cpu);
+        if (primary.apply(cpu) ^ negative) {
             cpu.setPC(jump);
         }
     }

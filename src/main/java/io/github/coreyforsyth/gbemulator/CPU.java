@@ -95,6 +95,11 @@ public class CPU
         }
     }
 
+    public void cpuWriteByte(char address, byte value) {
+        writeByte(address, value);
+        cycle();
+    }
+
     public void writeByte(char address, byte value) {
         if (address < 0x8000) {
             cartridge.write(address, value);
@@ -151,6 +156,15 @@ public class CPU
         return (char) ( H << 8 | L & 0x00FF);
     }
 
+    public char getAF() {
+        int AF = isZero() ? 0x80 : 0;
+        AF |= isSubtraction() ? 0x40 : 0;
+        AF |= isHalfCarry() ? 0x20 : 0;
+        AF |= isCarry() ? 0x10 : 0;
+        AF |= getA() << 8;
+        return (char) AF;
+    }
+
     public void setBC(char BC) {
         B = (byte) (BC >> 8 & 0xFF);
         C = (byte) (BC & 0xFF);
@@ -166,8 +180,33 @@ public class CPU
         L = (byte) (HL & 0xFF);
     }
 
+    public void setAF(char AF) {
+        A = (byte) (AF >> 8 & 0xFF);
+        byte F = (byte) (AF & 0xFF);
+        setZero((F & 0x80) == 0x80);
+        setSubtraction((F & 0x40) == 0x40);
+        setHalfCarry((F & 0x20) == 0x20);
+        setCarry((F & 0x10) == 0x10);
+    }
+
     public char readIncrementPC() {
         return PC++;
+    }
+
+    public byte readBC() {
+        return cpuReadByte(getBC());
+    }
+
+    public void writeBC(byte value) {
+        writeByte(getBC(), value);
+    }
+
+    public byte readDE() {
+        return cpuReadByte(getDE());
+    }
+
+    public void writeDE(byte value) {
+        writeByte(getDE(), value);
     }
 
     public byte readHL() {

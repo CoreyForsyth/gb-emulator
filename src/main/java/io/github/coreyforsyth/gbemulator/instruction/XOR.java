@@ -1,14 +1,13 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 public class XOR extends ByteNoCarryInstruction
 {
-    public XOR(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+    public XOR(Accessor<Byte> secondary)
     {
-        super(a, b, setter);
+        super(Accessor.A, secondary);
     }
 
     @Override

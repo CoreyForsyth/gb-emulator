@@ -1,28 +1,24 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class SWAP implements Instruction
+public class SWAP extends Instruction<Byte, Void>
 {
 
-    private final Function<CPU, Byte> getter;
-    private final BiConsumer<CPU, Byte> setter;
-
-    public SWAP(Function<CPU, Byte> getter, BiConsumer<CPU, Byte> setter)
+    public SWAP(Accessor<Byte> primary)
     {
-        this.getter = getter;
-        this.setter = setter;
+        super(primary, null);
     }
-
 
     @Override
     public void accept(CPU cpu)
     {
-        Byte value = getter.apply(cpu);
+        Byte value = primary.apply(cpu);
         byte u = (byte) ((value & 0x0F << 4) | (value & 0xF0 >> 4));
-        setter.accept(cpu, u);
+        primary.accept(cpu, u);
         cpu.clearFlags();
         cpu.setZero(u == 0);
     }

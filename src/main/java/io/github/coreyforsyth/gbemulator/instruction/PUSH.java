@@ -1,23 +1,23 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.Function;
 
-public class PUSH implements Instruction
+public class PUSH extends Instruction<Character, Void>
 {
 
-    private final Function<CPU, Character> getter;
 
-    public PUSH(Function<CPU, Character> getter)
+    public PUSH(Accessor<Character> primary)
     {
-        this.getter = getter;
+        super(primary, null);
     }
 
     @Override
     public void accept(CPU cpu)
     {
         char sp = cpu.getSP();
-        Character character = getter.apply(cpu);
+        Character character = primary.apply(cpu);
         byte higher = (byte) (byte) ((character & 0xff00) >> 8);
         byte lower = (byte) (character & 0xff);
         cpu.writeByte(--sp, higher);

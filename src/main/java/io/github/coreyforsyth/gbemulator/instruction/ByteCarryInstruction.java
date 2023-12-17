@@ -1,15 +1,14 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 public abstract class ByteCarryInstruction extends FlagInstruction<Byte>
 {
 
-    public ByteCarryInstruction(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+    public ByteCarryInstruction(Accessor<Byte> primary, Accessor<Byte> secondary)
     {
-        super(a, b, setter);
+        super(primary, secondary);
     }
 
     public Byte castResult(int result) {

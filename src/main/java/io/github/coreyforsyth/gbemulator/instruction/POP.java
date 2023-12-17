@@ -1,16 +1,15 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 
-public class POP implements Instruction
+public class POP extends Instruction<Character, Void>
 {
 
-    private final BiConsumer<CPU, Character> setter;
-
-    public POP(BiConsumer<CPU, Character> setter)
+    public POP(Accessor<Character> primary)
     {
-        this.setter = setter;
+        super(primary, null);
     }
 
     @Override
@@ -19,7 +18,7 @@ public class POP implements Instruction
         char sp = cpu.getSP();
         byte lower = cpu.cpuReadByte(sp++);
         byte higher = cpu.cpuReadByte(sp++);
-        setter.accept(cpu, (char) ((higher & 0xFF) << 8 | (lower & 0xFF)));
+        primary.accept(cpu, (char) ((higher & 0xFF) << 8 | (lower & 0xFF)));
         cpu.setSP(sp);
     }
 }

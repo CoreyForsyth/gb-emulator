@@ -1,15 +1,14 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 public class INC extends ADD
 {
 
-    public INC(Function<CPU, Byte> a, BiConsumer<CPU, Byte> setter)
+    public INC(Accessor<Byte> primary)
     {
-        super(a, cpu -> (byte) 1, setter);
+        super(primary, Accessor.ONE);
     }
 
     @Override

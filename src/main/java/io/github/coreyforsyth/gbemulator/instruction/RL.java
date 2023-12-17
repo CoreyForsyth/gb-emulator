@@ -1,30 +1,27 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class RL implements Instruction
+public class RL extends Instruction<Byte, Void>
 {
 
-    private final Function<CPU, Byte> getter;
-    private final BiConsumer<CPU, Byte> setter;
-
-    public RL(Function<CPU, Byte> getter, BiConsumer<CPU, Byte> setter)
+    public RL(Accessor<Byte> primary)
     {
-        this.getter = getter;
-        this.setter = setter;
+        super(primary, null);
     }
 
     @Override
     public void accept(CPU cpu)
     {
-        int value = getter.apply(cpu);
+        int value = primary.apply(cpu);
         boolean carry = (value & 0x80) == 0x80;
         value = (value << 1) | (cpu.isCarry() ? 1 : 0);
         cpu.clearFlags();
         cpu.setZero(value == 0);
         cpu.setCarry(carry);
-        setter.accept(cpu, (byte) value);
+        primary.accept(cpu, (byte) value);
     }
 }

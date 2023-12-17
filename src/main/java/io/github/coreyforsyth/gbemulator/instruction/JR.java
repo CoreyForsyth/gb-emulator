@@ -1,12 +1,11 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
-import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.Predicate;
+import io.github.coreyforsyth.gbemulator.Accessor;
 
 public class JR extends JP
 {
-    public JR(Predicate<CPU> shouldJump)
+    public JR(Accessor<Boolean> primary, boolean negative)
     {
-        super(cpu -> (char) (cpu.nextByte() + cpu.getPC()), shouldJump);
+        super(primary, Accessor.REL_PC_IM8, negative);
     }
 }

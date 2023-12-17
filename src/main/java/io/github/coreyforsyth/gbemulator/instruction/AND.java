@@ -1,14 +1,13 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 public class AND extends ByteNoCarryInstruction
 {
-    public AND(Function<CPU, Byte> a, Function<CPU, Byte> b, BiConsumer<CPU, Byte> setter)
+    public AND(Accessor<Byte> secondary)
     {
-        super(a, b, setter);
+        super(Accessor.A, secondary);
     }
 
     @Override

@@ -1,25 +1,23 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
-public class CALL implements Instruction
+public class CALL extends Instruction<Boolean, Character>
 {
-    private final Predicate<CPU> call;
-	private final Function<CPU, Character> getter;
+    private final boolean negative;
 
-    public CALL(Predicate<CPU> call, Function<CPU, Character> getter)
+    public CALL(Accessor<Boolean> primary, Accessor<Character> secondary, boolean negative)
     {
-        this.call = call;
-		this.getter = getter;
-	}
+        super(primary, secondary);
+        this.negative = negative;
+    }
 
     @Override
     public void accept(CPU cpu)
     {
-        char routineAddress = getter.apply(cpu);
-        if (call.test(cpu))
+        char routineAddress = secondary.apply(cpu);
+        if (primary.apply(cpu) ^ negative)
         {
             byte pcLower = cpu.getPCLower();
             byte pcHigher = cpu.getPCHigher();

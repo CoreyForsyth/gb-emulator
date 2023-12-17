@@ -1,21 +1,22 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
+import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
-import java.util.function.Predicate;
 
-public class RET implements Instruction
+public class RET extends Instruction<Boolean, Void>
 {
-    private final Predicate<CPU> call;
+    private final boolean negative;
 
-    public RET(Predicate<CPU> call)
+    public RET(Accessor<Boolean> primary, boolean negative)
     {
-        this.call = call;
+        super(primary, null);
+        this.negative = negative;
     }
 
     @Override
     public void accept(CPU cpu)
     {
-        if (call.test(cpu))
+        if (primary.apply(cpu) ^ negative)
         {
             char sp = cpu.getSP();
             byte pcLower = cpu.cpuReadByte(sp++);
