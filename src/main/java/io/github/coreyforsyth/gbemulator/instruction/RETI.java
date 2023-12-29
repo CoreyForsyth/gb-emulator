@@ -13,7 +13,8 @@ public class RETI extends RET
     @Override
     public void accept(CPU cpu)
     {
-        System.out.println("RETI, turning off IME flag");
-        cpu.setInterruptEnabled(false);
+        super.accept(cpu);
+        System.out.println("RETI, turning on IME flag");
+        cpu.setInterruptEnabled(true);
     }
 }

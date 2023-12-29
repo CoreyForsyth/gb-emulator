@@ -19,6 +19,7 @@ public class JP extends Instruction<Boolean, Character>
         Character jump = secondary.apply(cpu);
         if (primary.apply(cpu) ^ negative) {
             cpu.setPC(jump);
+            cpu.cycle();
         }
     }
 }

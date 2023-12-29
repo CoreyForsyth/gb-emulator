@@ -16,7 +16,7 @@ public class SUB extends ByteCarryInstruction
     @Override
     public int applyOperation(CPU cpu, Byte a, Byte b)
     {
-        return a - b;
+        return (0xFF & a) - (0xFF & b);
     }
 
     @Override

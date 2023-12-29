@@ -18,7 +18,7 @@ public class SRL extends Instruction<Byte, Void>
     {
         int value = primary.apply(cpu);
         boolean carry = (value & 0x01) == 1;
-        value = value >> 1;
+        value = (value & 0xFF) >> 1;
         cpu.clearFlags();
         cpu.setZero(value == 0);
         cpu.setCarry(carry);

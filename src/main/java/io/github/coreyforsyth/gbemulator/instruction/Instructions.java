@@ -1,6 +1,7 @@
 package io.github.coreyforsyth.gbemulator.instruction;
 
 import io.github.coreyforsyth.gbemulator.Accessor;
+import io.github.coreyforsyth.gbemulator.Bus;
 import io.github.coreyforsyth.gbemulator.CPU;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,14 +16,7 @@ public class Instructions
     public static final Instruction<Boolean, Character> serialInterrupt = new RST((byte) 0x58);
     public static final Instruction<Boolean, Character> joypadInterrupt = new RST((byte) 0x60);
 
-    private static final Instruction<Void,Void> nop = new Instruction<>(null, null)
-    {
-        @Override
-        public void accept(CPU cpu)
-        {
-
-        }
-    };
+    private static final Instruction<Void,Void> nop = new NOP();
 
     static
     {
@@ -35,7 +29,7 @@ public class Instructions
         instructions[0x04] = new INC(Accessor.B);
         instructions[0x05] = new DEC(Accessor.B);
         instructions[0x06] = new LD(Accessor.B, Accessor.IM8);
-        instructions[0x07] = new RLC(Accessor.A);
+        instructions[0x07] = new RLCA();
         instructions[0x08] = new LDC(Accessor.ADR_IM16_CHAR, Accessor.SP);
         instructions[0x09] = new ADDC(Accessor.HL, Accessor.BC);
         instructions[0x0A] = new LD(Accessor.A, Accessor.ADR_BC);
@@ -43,15 +37,15 @@ public class Instructions
         instructions[0x0C] = new INC(Accessor.C);
         instructions[0x0D] = new DEC(Accessor.C);
         instructions[0x0E] = new LD(Accessor.C, Accessor.IM8);
-        instructions[0x0F] = new RRC(Accessor.A);
+        instructions[0x0F] = new RRCA();
         instructions[0x10] = nop;
         instructions[0x11] = new LDC(Accessor.DE, Accessor.IM16);
         instructions[0x12] = new LD(Accessor.ADR_DE, Accessor.A);
         instructions[0x13] = new INCC(Accessor.DE);
         instructions[0x14] = new INC(Accessor.D);
         instructions[0x15] = new DEC(Accessor.D);
-        instructions[0x16] = new LD(Accessor.D, Accessor.ADR_DE);
-        instructions[0x17] = new RL(Accessor.A);
+        instructions[0x16] = new LD(Accessor.D, Accessor.IM8);
+        instructions[0x17] = new RLA();
         instructions[0x18] = new JR(Accessor.TRUE, false);
         instructions[0x19] = new ADDC(Accessor.HL, Accessor.DE);
         instructions[0x1A] = new LD(Accessor.A, Accessor.ADR_DE);
@@ -59,7 +53,7 @@ public class Instructions
         instructions[0x1C] = new INC(Accessor.E);
         instructions[0x1D] = new DEC(Accessor.E);
         instructions[0x1E] = new LD(Accessor.E, Accessor.IM8);
-        instructions[0x1F] = new RR(Accessor.A);
+        instructions[0x1F] = new RRA();
         instructions[0x20] = new JR(Accessor.Z, true);
         instructions[0x21] = new LDC(Accessor.HL, Accessor.IM16);
         instructions[0x22] = new LD(Accessor.ADR_HLI, Accessor.A);
@@ -147,7 +141,7 @@ public class Instructions
         instructions[0X73] = new LD(Accessor.ADR_HL, Accessor.E);
         instructions[0X74] = new LD(Accessor.ADR_HL, Accessor.H);
         instructions[0X75] = new LD(Accessor.ADR_HL, Accessor.L);
-        instructions[0X76] = nop; // TODO: HALT
+        instructions[0X76] = new HALT(); // TODO: HALT
         instructions[0X77] = new LD(Accessor.ADR_HL, Accessor.A);
         instructions[0X78] = new LD(Accessor.A, Accessor.B);
         instructions[0X79] = new LD(Accessor.A, Accessor.C);
@@ -220,7 +214,7 @@ public class Instructions
         instructions[0XBC] = new CP(Accessor.H);
         instructions[0XBD] = new CP(Accessor.L);
         instructions[0XBE] = new CP(Accessor.ADR_HL);
-        instructions[0XBF] = new CP(Accessor.B);
+        instructions[0XBF] = new CP(Accessor.A);
         instructions[0XC0] = new RET(Accessor.Z, true);
         instructions[0XC1] = new POP(Accessor.BC);
         instructions[0XC2] = new JP(Accessor.Z, Accessor.IM16, true);
@@ -267,6 +261,18 @@ public class Instructions
             {
                 cpu.setZero(false);
             }
+
+            @Override
+            public void setCy(CPU cpu, int result, Character a, Character b)
+            {
+                cpu.setCarry(((applyOperation(cpu, (char) (a & 0x00FF), (char) (b & 0x00FF))) & 0x0100) == 0x0100);
+            }
+
+            @Override
+            public void setHC(CPU cpu, Character result, Character a, Character b)
+            {
+                cpu.setHalfCarry(((applyOperation(cpu, (char) (a & 0x000F), (char) (b & 0x000F))) & 0x0010) == 0x0010);
+            }
         };
         instructions[0XE9] = new JP(Accessor.TRUE, Accessor.HL, false);
         // LD (a16), A
@@ -292,6 +298,18 @@ public class Instructions
             {
                 cpu.setZero(false);
             }
+
+            @Override
+            public void setCy(CPU cpu, int result, Character a, Character b)
+            {
+                cpu.setCarry(((applyOperation(cpu, (char) (a & 0x00FF), (char) (b & 0x00FF))) & 0x0100) == 0x0100);
+            }
+
+            @Override
+            public void setHC(CPU cpu, Character result, Character a, Character b)
+            {
+                cpu.setHalfCarry(((applyOperation(cpu, (char) (a & 0x000F), (char) (b & 0x000F))) & 0x0010) == 0x0010);
+            }
         };
         instructions[0XF9] = new LDC(Accessor.SP, Accessor.HL);
         instructions[0XFA] = new LD(Accessor.A, Accessor.ADR_IM16_BYTE);
@@ -308,43 +326,58 @@ public class Instructions
 
     public static int next(CPU cpu)
     {
-        // 5A36
-        Instruction<?, ?> instruction;
+        // 4BF5
+        Instruction<?, ?> instruction = null;
         byte b = 0;
-        if (cpu.isInterruptEnabled() && (cpu.getInterruptRegister() & 0x1f) != 0 && (cpu.readByte((char) 0xFF0F) & 0x1F) != 0) {
-            cpu.setInterruptEnabled(false);
-            byte interruptRegister = cpu.getInterruptRegister();
-            if ((interruptRegister & 0x01) != 0) {
+        byte IE = cpu.getIE();
+        byte IF = cpu.cpuReadByte(Bus.IF);
+        int interrupts = IE & IF;
+        if (interrupts != 0) {
+            cpu.setHalt(false);
+        }
+        if (cpu.isInterruptEnabled()) {
+            if ((0x01 & interrupts) != 0) {
                 instruction = vblankInterrupt;
-            } else if ((interruptRegister & 0x02) != 0) {
+                cpu.setInterruptEnabled(false);
+                cpu.writeByte(Bus.IF, (byte) (IF & 0xFE));
+            } else if ((0x02 & interrupts) != 0) {
                 instruction = statInterrupt;
-            } else if ((interruptRegister & 0x04) != 0) {
+                cpu.setInterruptEnabled(false);
+                cpu.writeByte(Bus.IF, (byte) (IF & 0xFD));
+            } else if ((0x04 & interrupts) != 0) {
                 instruction = timerInterrupt;
-            } else if ((interruptRegister & 0x08) != 0) {
+                cpu.setInterruptEnabled(false);
+                cpu.writeByte(Bus.IF, (byte) (IF & 0xFB));
+            } else if ((0x08 & interrupts) != 0) {
                 instruction = serialInterrupt;
-            } else {
+                cpu.setInterruptEnabled(false);
+                cpu.writeByte(Bus.IF, (byte) (IF & 0xF7));
+            } else if ((0x10 & interrupts) != 0) {
                 instruction = joypadInterrupt;
+                cpu.setInterruptEnabled(false);
+                cpu.writeByte(Bus.IF, (byte) (IF & 0xEF));
             }
-        } else {
+        }
+
+        cpu.setCycleCount(0);
+        if (instruction == null && !cpu.isHalt()) {
             b = cpu.nextByte();
-            instruction = instructions[b & 0xFF];
+            instruction = getInstruction(b);
         }
 
-        if (instruction != nop && (b & 0xFF ) != 0)
-        {
-            if (cpu.isDebug()) {
-                instruction.debug(cpu, b);
-            } else {
-
-                instruction.accept(cpu);
-            }
-
-//            log.info("Executing instruction: {} using {}", String.format("%02X", b), instruction);
+        if (instruction != null) {
+            instruction.accept(cpu);
+        } else {
+            // halted
+            cpu.cycle();
         }
-        else
-        {
-            System.out.printf("Implement instruction: %02X%n", b);
-        }
+        cpu.logState();
         return b;
     }
+
+    public static Instruction<?, ?> getInstruction(byte b)
+    {
+        return instructions[b & 0xFF];
+    }
+
 }

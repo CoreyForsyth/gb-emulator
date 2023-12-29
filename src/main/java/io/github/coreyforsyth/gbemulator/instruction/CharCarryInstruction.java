@@ -20,7 +20,7 @@ public abstract class CharCarryInstruction extends FlagInstruction<Character>
     @Override
     public void setHC(CPU cpu, Character result, Character a, Character b)
     {
-        cpu.setHalfCarry(((applyOperation(cpu, (char) ((a & 0x0F00) >> 8), (char) ((b & 0x0F00) >> 8))) & 0x1000) == 0x1000);
+        cpu.setHalfCarry(((applyOperation(cpu, (char) (a & 0x0FFF), (char) (b & 0x0FFF))) & 0x1000) == 0x1000);
     }
 
     @Override

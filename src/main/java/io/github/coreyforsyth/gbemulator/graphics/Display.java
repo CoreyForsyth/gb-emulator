@@ -1,8 +1,7 @@
 package io.github.coreyforsyth.gbemulator.graphics;
 
-import io.github.coreyforsyth.gbemulator.memory.IO;
-import io.github.coreyforsyth.gbemulator.memory.Oam;
-import io.github.coreyforsyth.gbemulator.memory.VRam;
+import io.github.coreyforsyth.gbemulator.Bus;
+import io.github.coreyforsyth.gbemulator.memory.ReadWrite;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
@@ -10,36 +9,34 @@ import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.util.Arrays;
 
-public class Display
+public class Display implements ReadWrite
 {
-	private static final char LY = 0xFF44;
-	private static final char LYC = 0xFF45;
-	private static final char STAT = 0xFF41;
-	private static final char BGP = 0xFF47;
 
-	private final IO io;
-	private final VRam vRam;
-	private final Oam oam;
+	private final Bus bus;
 	private final IndexColorModel indexColorModel;
 
 	private BufferedImage image;
 	private int dotIndex;
 	private int mode;
 
-	public static void main(String[] args)
-	{
-		Display display = new Display(new IO(), new VRam(), new Oam());
-		for (int i = 0; i < 140000; i++)
-		{
-			display.cycle(4);
-		}
-	}
+    private byte lcdc;
+    private byte stat;
+    private byte scy;
+    private byte scx;
+    private byte ly;
+    private byte lyc;
+    private byte dma;
+    private byte bgp;
+    private byte obp0;
+    private byte obp1;
+    private byte wy;
+    private byte wx;
 
-	public Display(IO io, VRam vRam, Oam oam)
+    private boolean statLatch;
+
+	public Display(Bus bus)
 	{
-		this.io = io;
-		this.vRam = vRam;
-		this.oam = oam;
+		this.bus = bus;
 		Color[] colors = new Color[4];
 		colors[0] = new Color(0xFFFFFF);
 		colors[1] = new Color(0xADADAD);
@@ -50,96 +47,148 @@ public class Display
 		indexColorModel = new IndexColorModel(2, 4, cmap, 0, false, -1, DataBuffer.TYPE_BYTE);
 		dotIndex = 0;
 		mode = 2;
+        image = new BufferedImage(256, 256, BufferedImage.TYPE_BYTE_BINARY, indexColorModel);
 
 	}
 
-	public void cycle(int dotsElapsed) {
-		dotIndex += dotsElapsed;
-		setLy();
-		int dotX = dotIndex % 456;
-		if (mode == 2 && dotX >= 80)
-		{
-			setMode(3);
-		} else if (mode == 3 && dotX >= 252) {
-			setMode(0);
-		} else if (mode == 0 && dotX < 252) {
-			if (dotIndex / 456 > 143) {
-				byte IF = io.read((char) 0xFF0F);
-				IF = (byte) (IF | 1);
-				io.write((char) 0xFF0F, IF);
-				setMode(1);
-				writeImage();
-			} else {
-				setMode(2);
-			}
-		} else if (mode == 1 && dotIndex >= 70224) {
-			dotIndex = dotX;
-			setMode(2);
-		}
+	public void cycle() {
+		dotIndex += 4;
+        dotIndex %= 70224;
+        int dotX = dotIndex % 456;
+        ly = (byte) (dotIndex / 456);
+
+        boolean vBlankInterrupt = false;
+        if ((ly & 0xFF) > 0x8f) {
+            if (mode == 0) {
+                vBlankInterrupt = true;
+                writeImage();
+            }
+            mode = 1;
+        } else if (dotX <= 80) {
+            mode = 2;
+        } else if (dotX <= 252) {
+            mode = 3;
+        } else {
+            mode = 0;
+        }
+
+        boolean lycSelected = lyc == ly;
+        refreshStat(lycSelected);
+
+        if (vBlankInterrupt) {
+            bus.requestInterrupt(0x01);
+        }
+
+        boolean statHigh = (mode == 0 && (stat & 0x08) == 0x08) ||
+            (mode == 1 && (stat & 0x10) == 0x10) ||
+            (mode == 2 && (stat & 0x20) == 0x20) ||
+            (lycSelected && (stat & 0x40) == 0x40);
+
+        if (statHigh)
+        {
+            if (!statLatch) {
+                statLatch = true;
+                bus.requestInterrupt(0x02);
+            }
+        } else {
+            statLatch = false;
+        }
+
 	}
 
-	public void writeImage()
+
+    public void writeImage()
 	{
-		System.out.println("WRITING IMAGE");
-		image = new BufferedImage(256, 256, BufferedImage.TYPE_BYTE_BINARY, indexColorModel);
 		WritableRaster raster = image.getRaster();
 
 
-		char windowTileMap = 0x9C00;
-		char backgroundTileMap = 0x9800;
-		char tileData = 0x9000;
-
-		int bgPalette = io.read(BGP);
+        char windowTileMapArea = (char) ((lcdc & 0x40) == 0x40 ? 0x9C00: 0x9800 );
+        boolean windowEnable = (lcdc & 0x20) == 0x20;
+        boolean backgroundAndWindowTileDataArea = (lcdc & 0x10) == 0x10;
+        char backgroundTileMapArea = (char) ((lcdc & 0x08) == 0x08 ? 0x9C00: 0x9800 );
+        boolean objSize = (lcdc & 0x04) == 0x04;
+        boolean objEnable = (lcdc & 0x02) == 0x02;
 
 		for (int tx = 0; tx < 32; tx++)
 		{
 			for (int ty = 0; ty < 32; ty++)
 			{
-				char tileIndexAddress = (char) (ty * 32 + tx + backgroundTileMap);
-				byte tileIndex = vRam.read(tileIndexAddress);
-				char startAddress = (char)(tileData + (tileIndex * 16));
-				int tileStartX = tx * 8;
+				char tileIndexAddress = (char) (ty * 32 + tx + backgroundTileMapArea);
+				byte tileIndex = bus.read(tileIndexAddress);
+                char startAddress = getStartAddress(tileIndex, backgroundAndWindowTileDataArea);
+                int tileStartX = tx * 8;
 				int tileStartY = ty * 8;
-				drawTile(vRam, raster, tileStartX, tileStartY, startAddress, false, false, false, bgPalette);
+				drawTile(bus, raster, tileStartX, tileStartY, startAddress, false, false, false, bgp);
 			}
 		}
 
-		for (int objectIndex = 39; objectIndex >=0; objectIndex--)
-		{
-			int objectAddress = 0xFE00 + 4 * objectIndex;
-			byte yPos = oam.read((char) objectAddress);
-			byte xPos = oam.read((char) (objectAddress + 1));
-			byte tileIndex = oam.read((char) (objectAddress + 2));
-			byte attributes = oam.read((char) (objectAddress + 3));
-			char paletteAddress = (char) (0xFF48 + ((attributes >> 4) & 1));
-			boolean flipX = ((attributes >> 5) & 1) == 1;
-			boolean flipY = ((attributes >> 6) & 1) == 1;
-			// obj is always on top of BG without including priority flag
-			boolean priority = ((attributes >> 7) & 1) == 1;
-			int palette = io.read(paletteAddress) & 0xFF;
-			drawTile(vRam, raster, (xPos & 0xFF) - 8, (yPos & 0xFF) - 16, (char) (0x8000 + ((0xFF & tileIndex) * 16)), flipX, flipY, true, palette);
-		}
+        if (objEnable)
+        {
+            for (int objectIndex = 39; objectIndex >=0; objectIndex--)
+            {
+                int objectAddress = 0xFE00 + 4 * objectIndex;
+                byte yPos = bus.read((char) objectAddress);
+                byte xPos = bus.read((char) (objectAddress + 1));
+                byte tileIndex = bus.read((char) (objectAddress + 2));
+                byte attributes = bus.read((char) (objectAddress + 3));
+                boolean flipX = ((attributes >> 5) & 1) == 1;
+                boolean flipY = ((attributes >> 6) & 1) == 1;
+                // obj is always on top of BG without including priority flag
+                boolean priority = ((attributes >> 7) & 1) == 1;
+                int palette = (attributes & 0x10) == 0x10 ? obp1 : obp0;
+                drawTile(bus, raster, (xPos & 0xFF) - 8, (yPos & 0xFF) - 16, (char) (0x8000 + ((0xFF & tileIndex) * 16)), flipX, flipY, true, palette);
+            }
+        }
+        int i = 0b11001011;
 
-
+        // window
+        if (windowEnable) {
+            for (int tx = 0; tx < 32; tx++)
+            {
+                for (int ty = 0; ty < 32; ty++)
+                {
+                    char tileIndexAddress = (char) (ty * 32 + tx + windowTileMapArea);
+                    byte tileIndex = bus.read(tileIndexAddress);
+                    char startAddress = getStartAddress(tileIndex, backgroundAndWindowTileDataArea);
+                    int tileStartX = tx * 8;
+                    int tileStartY = ty * 8;
+                    drawTile(bus, raster, tileStartX, tileStartY, startAddress, false, false, false, bgp);
+                }
+            }
+        }
 
 	}
 
-	private static void drawTile(VRam vRam, WritableRaster raster, int tileStartX, int tileStartY, char startAddress, boolean flipX, boolean flipY, boolean transparent, int palette)
+
+    private static char getStartAddress(byte tileIndex, boolean bgWindowTiles)
+    {
+        if (bgWindowTiles) {
+            return (char)(0x8000 + ((tileIndex & 0xFF) * 16));
+        } else {
+            return (char)(0x9000 + (tileIndex * 16));
+        }
+    }
+
+    private static void drawTile(Bus bus, WritableRaster raster, int tileStartX, int tileStartY, char startAddress, boolean flipX, boolean flipY, boolean transparent, int palette)
 	{
 		for (int py = 0; py < 8; py++)
 		{
 			int byteAddressOffset = getByteAddressOffset(py, flipY);
 			char address1 = (char) (startAddress + byteAddressOffset);
 			char address2 = (char) (startAddress + byteAddressOffset + 1);
-			byte byte1 = vRam.read(address1);
-			byte byte2 = vRam.read(address2);
+			byte byte1 = bus.read(address1);
+			byte byte2 = bus.read(address2);
 			for (int px = 0; px < 8; px++)
 			{
 				int byteIndex = getByteIndex(px, flipX);
 				int colorShift = ((byte1 >> byteIndex) & 1) | ((byte2 >> byteIndex) & 1) << 1;
 				if (colorShift != 0 || !transparent) {
 					int sample = (palette >> (colorShift << 1)) & 3;
-					raster.setSample(px + tileStartX, py + tileStartY, 0, sample);
+                    int x = px + tileStartX;
+                    int y = py + tileStartY;
+                    if (x >= 0 && x <= 256 && y >= 0 && y <= 256) {
+                        raster.setSample(x, y, 0, sample);
+                    }
 				}
 			}
 		}
@@ -156,15 +205,9 @@ public class Display
 		return flip ? px : 7 - px;
 	}
 
-	private void setLy()
+	private void refreshStat(boolean lycSelected)
 	{
-		io.write(LY, (byte) (dotIndex / 456));
-	}
-
-	private void setMode(int mode) {
-		this.mode = mode;
-		byte newValue = (byte) ((io.read(STAT) & 0xfc) | mode);
-		io.write(STAT, newValue);
+        stat = (byte) ((stat & 0b11111000) | mode | (lycSelected ? 0x04 : 0));
 	}
 
 	public BufferedImage getImage()
@@ -174,4 +217,60 @@ public class Display
 		}
 		return image;
 	}
+
+    private void executeDma()
+    {
+        char dmaStart = (char) ((dma & 0xFF) * 0x0100);
+        System.out.printf("STARTING DMA FROM ADDRESS: %04X\n", (int) dmaStart);
+        for (int i = 0; i < 0xa0; i++)
+        {
+            char sourceAddress = (char) (dmaStart + i);
+            char destinationAddress = (char) (0xFE00 + i);
+            bus.write(destinationAddress, bus.read(sourceAddress));
+        }
+    }
+
+    @Override
+    public byte read(char address)
+    {
+        return switch (address) {
+            case Bus.LCDC -> lcdc;
+            case Bus.STAT -> stat;
+            case Bus.SCY -> scy;
+            case Bus.SCX -> scx;
+            case Bus.LY -> ly;
+            case Bus.LYC -> lyc;
+            case Bus.DMA -> dma;
+            case Bus.BGP -> bgp;
+            case Bus.OBP0 -> obp0;
+            case Bus.OBP1 -> obp1;
+            case Bus.WY -> wy;
+            case Bus.WX -> wx;
+            default -> throw new IllegalStateException("Unexpected value: " + address);
+        };
+    }
+
+    @Override
+    public void write(char address, byte value)
+    {
+        switch (address) {
+            case Bus.LCDC -> lcdc = value;
+            case Bus.STAT -> stat = value;
+            case Bus.SCY -> scy = value;
+            case Bus.SCX -> scx = value;
+            case Bus.LY -> {}
+            case Bus.LYC -> lyc = value;
+            case Bus.DMA ->
+            {
+                dma = value;
+                executeDma();
+            }
+            case Bus.BGP -> bgp = value;
+            case Bus.OBP0 -> obp0 = value;
+            case Bus.OBP1 -> obp1 = value;
+            case Bus.WY -> wy = value;
+            case Bus.WX -> wx = value;
+            default -> throw new IllegalStateException("Unexpected value: " + address);
+        };
+    }
 }

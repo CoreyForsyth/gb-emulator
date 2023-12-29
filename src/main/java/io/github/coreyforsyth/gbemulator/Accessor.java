@@ -32,46 +32,81 @@ public class Accessor<T> implements Function<CPU, T>, BiConsumer<CPU, T>
         byte value = cpu.readHL();
         cpu.setHL((char) (cpu.getHL() + 1));
         return value;
-    }, (cpu, value) -> cpu.writeByte(cpu.getHL(), value));
-    public static Accessor<Byte> ADR_HLD = new Accessor<>("(HL+)", cpu -> {
+    }, (cpu, value) -> {
+        cpu.writeHL(value);
+        cpu.setHL((char) (cpu.getHL() + 1));
+    });
+    public static Accessor<Byte> ADR_HLD = new Accessor<>("(HL-)", cpu -> {
         byte value = cpu.readHL();
         cpu.setHL((char) (cpu.getHL() - 1));
         return value;
-    }, (cpu, value) -> cpu.writeByte(cpu.getHL(), value));
-    public static Accessor<Byte> IM8 = new Accessor<>("IM8", CPU::nextByte, (cpu, value) -> {}) {
+    }, (cpu, value) -> {
+        cpu.writeHL(value);
+        cpu.setHL((char) (cpu.getHL() - 1));
+    });
+    public static Accessor<Byte> IM8 = new Accessor<>("IM8", CPU::nextByte, (cpu, value) -> {}, 1) {
         @Override
         public String friendlyName(CPU cpu, char pcAddress)
         {
-            byte value = cpu.readByte(pcAddress);
-            return String.format("0x%02X", (int) value);
+            byte value = cpu.readByte((char) (pcAddress + 1));
+            return String.format("0x%02X", value & 0xFF);
         }
     };
     public static Accessor<Character> IM16 = new Accessor<>("IM16", CPU::nextChar, (cpu, value) -> {}, 2) {
         @Override
         public String friendlyName(CPU cpu, char pcAddress)
         {
-            byte low = cpu.readByte(pcAddress);
-            byte high = cpu.readByte((char) (pcAddress + 1));
+            byte low = cpu.readByte((char) (pcAddress + 1));
+            byte high = cpu.readByte((char) (pcAddress + 2));
             char value = (char) ( high << 8 | low & 0x00FF);
-            return String.format("0x%04X", (int) value);
+            return String.format("0x%04X", value & 0xFFFF);
         }
     };
     public static Accessor<Character> ADR_IM16_CHAR = new Accessor<>("(a16)", cpu -> null, (cpu, value) -> {
         char c = cpu.nextChar();
-        cpu.writeByte(c, (byte) (value & 0xFF));
-        cpu.writeByte((char) (c + 1), (byte) ((value & 0xFF00) >> 8));
+        cpu.cpuWriteByte(c, (byte) (value & 0xFF));
+        cpu.cpuWriteByte((char) (c + 1), (byte) ((value & 0xFF00) >> 8));
     }, 2);
     public static Accessor<Byte> ONE = new Accessor<>("1", cpu -> (byte) 1, (cpu, value) -> {});
     public static Accessor<Boolean> TRUE = new Accessor<>("true", cpu -> true, (cpu, value) -> {});
-    public static Accessor<Character> REL_PC_IM8 = new Accessor<>("s8", cpu -> (char) (cpu.nextByte() + cpu.getPC()), (cpu, value) -> {});
+    public static Accessor<Character> REL_PC_IM8 = new Accessor<>("s8", cpu -> (char) (cpu.nextByte() + cpu.getPC()), (cpu, value) -> {}, 1) {
+        @Override
+        public String friendlyName(CPU cpu, char pcAddress)
+        {
+            byte b = cpu.readByte((char) (pcAddress + 1));
+            return String.format("0x%04X", (pcAddress + b + 2) & 0xFFFF);
+        }
+    };
     public static Accessor<Character> IM8_CHAR = new Accessor<>("s8", cpu -> (char) (cpu.nextByte()), (cpu, value) -> {});
     public static Accessor<Byte> REL_FF_IM8 = new Accessor<>("a8", cpu -> cpu.cpuReadByte((char) (0xFF00 | (cpu.nextByte() & 0xFF))),
-        (cpu, value) -> cpu.writeByte((char) (0xFF00 | (cpu.nextByte() & 0xFF)), value));
-    public static Accessor<Byte> REL_FF_C = new Accessor<>("a8", cpu -> cpu.cpuReadByte((char) (cpu.getC() & 0xFF00)),
-        (cpu, value) -> cpu.writeByte((char) (cpu.getC() & 0xFF00), value));
+        (cpu, value) -> cpu.cpuWriteByte((char) (0xFF00 | (cpu.nextByte() & 0xFF)), value), 1) {
+        @Override
+        public String friendlyName(CPU cpu, char pcAddress)
+        {
+            byte low = cpu.readByte((char) (pcAddress + 1));
+            char value = (char) ( 0xFF00 | low & 0x00FF);
+            return String.format("(0x%04X)", value & 0xFFFF);
+        }
+    };
+    public static Accessor<Byte> REL_FF_C = new Accessor<>("a8", cpu -> cpu.cpuReadByte((char) (0xFF00 | (cpu.getC() & 0xFF))),
+        (cpu, value) -> cpu.cpuWriteByte((char) (0xFF00 | (cpu.getC() & 0xFF)), value)) {
+        @Override
+        public String friendlyName(CPU cpu, char pcAddress)
+        {
+            return String.format("(0x%04X)", 0xFF00 | (cpu.getC() & 0xFF));
+        }
+    };
     public static Accessor<Byte> ADR_IM16_BYTE = new Accessor<>("(a16)", cpu -> cpu.readByte(cpu.nextChar()),
-        (cpu, value) -> cpu.writeByte(cpu.nextChar(), value));
-
+        (cpu, value) -> cpu.cpuWriteByte(cpu.nextChar(), value), 2) {
+        @Override
+        public String friendlyName(CPU cpu, char pcAddress)
+        {
+            byte low = cpu.readByte((char) (pcAddress + 1));
+            byte high = cpu.readByte((char) (pcAddress + 2));
+            char value = (char) ( high << 8 | low & 0x00FF);
+            return String.format("(0x%04X)", value & 0xFFFF);
+        }
+    };
 
 
 

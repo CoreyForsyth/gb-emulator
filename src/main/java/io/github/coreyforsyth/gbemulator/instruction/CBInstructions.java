@@ -280,7 +280,6 @@ public class CBInstructions
         byte b = cpu.nextByte();
         Instruction<?, ?> instruction = instructions[b & 0xFF];
         if (instruction != nop) {
-//            log.info("Executing CB instruction: {} using {}", String.format("%02X", b), instruction);
             instruction.accept(cpu);
         } else {
             System.out.printf("%02X%n", b);

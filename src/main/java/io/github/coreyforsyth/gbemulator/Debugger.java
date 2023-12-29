@@ -1,7 +1,13 @@
 package io.github.coreyforsyth.gbemulator;
 
 import io.github.coreyforsyth.gbemulator.graphics.ScreenPanel;
+import io.github.coreyforsyth.gbemulator.instruction.Instruction;
 import io.github.coreyforsyth.gbemulator.instruction.Instructions;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.swing.JButton;
@@ -11,6 +17,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
@@ -34,6 +41,7 @@ public class Debugger extends JFrame
     private final JTextField nextInst;
 	private final JTextField charAddress;
 	private final JTextField byteValue;
+    private final JTable table;
 
 
 
@@ -42,6 +50,7 @@ public class Debugger extends JFrame
         super("Debugger");
 
         cpu = initialCPU;
+        cpu.logState();
         MigLayout migLayout = new MigLayout("wrap 5");
         JPanel jPanel = new JPanel(migLayout);
         JFileChooser jFileChooser = new JFileChooser(System.getProperty("user.dir") + "/src/main/resources");
@@ -54,6 +63,7 @@ public class Debugger extends JFrame
             int i = jFileChooser.showOpenDialog(jPanel);
             if (i == JFileChooser.APPROVE_OPTION) {
                 cpu = RomLoader.initCpu(jFileChooser.getSelectedFile());
+                cpu.logState();
                 updateRegisterValues();
             }
         });
@@ -64,7 +74,7 @@ public class Debugger extends JFrame
         });
 
 
-		SpinnerNumberModel model = new SpinnerNumberModel(100, 1, 1000000, 1);
+		SpinnerNumberModel model = new SpinnerNumberModel(100, 1, 2000000, 1);
 		JSpinner instructionCount = new JSpinner(model);
         JButton skipInstruction = new JButton("Next n");
         skipInstruction.addActionListener(a -> {
@@ -80,14 +90,25 @@ public class Debugger extends JFrame
             updateRegisterValues();
         });
 
-		JTextField nextLy = new JTextField();
+        ScreenPanel screenPanel = new ScreenPanel(cpu);
+
+		JTextField nextLy = new JTextField("91");
 		JButton nextFrame = new JButton("Next Frame");
 		nextFrame.addActionListener(a -> {
-			executeUntilNextFrame(cpu, nextLy.getText());
+			executeUntilNextFrame(cpu, Integer.parseInt(nextLy.getText(), 16));
 			updateRegisterValues();
+            screenPanel.update();
 		});
+        JButton next10Frames = new JButton("Next Frames");
+        next10Frames.addActionListener(a -> {
+            for (int i = 0; i < 10; i++)
+            {
+                executeUntilNextFrame(cpu, 90);
+            }
+            updateRegisterValues();
+            screenPanel.update();
+        });
 
-		ScreenPanel screenPanel = new ScreenPanel(cpu);
 
         JButton aButton = new JButton(" A");
         a = new JTextField();
@@ -125,14 +146,15 @@ public class Debugger extends JFrame
 
         jPanel.add(romSelect, "skip");
         jPanel.add(nextInstruction);
-        jPanel.add(screenPanel, "skip, span 1 12");
+        jPanel.add(screenPanel, "skip, span 1 9");
         jPanel.add(instructionCount, "skip");
         jPanel.add(skipInstruction, "wrap");
         jPanel.add(nextOpcode, "skip");
         jPanel.add(executeUntilButton, "wrap");
 
 		jPanel.add(nextLy, "skip");
-		jPanel.add(nextFrame, "wrap");
+		jPanel.add(nextFrame);
+		jPanel.add(next10Frames, "wrap");
 
         jPanel.add(aButton);
         jPanel.add(a);
@@ -156,6 +178,17 @@ public class Debugger extends JFrame
         jPanel.add(pcButton);
         jPanel.add(pc, "span 2, growx");
         jPanel.add(nextInst);
+        table = new JTable(new Object[16][4], new String[]{"Addr", "Data", "Inst", "Params"});
+        table.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        table.setRowHeight(16);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        table.getColumnModel().getColumn(0).setPreferredWidth(0);
+        table.getColumnModel().getColumn(1).setPreferredWidth(0);
+        table.getColumnModel().getColumn(2).setPreferredWidth(0);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+        table.setPreferredSize(new Dimension(256, 256));
+        setupTable(cpu.getPC());
+        jPanel.add(table, "span 1 9");
 
 		jPanel.add(update);
 		jPanel.add(charAddress);
@@ -164,6 +197,18 @@ public class Debugger extends JFrame
 
 		jPanel.add(updateScreen);
 		jPanel.add(debug);
+        JButton nextInstructions = new JButton("Next instructions");
+        nextInstructions.addActionListener(l -> {
+            char instructionAddress = cpu.getPC();
+            for (int i = 0; i < 10; i++)
+            {
+                byte opCode = cpu.readByte(instructionAddress);
+                Instruction<?, ?> instruction = Instructions.getInstruction(opCode);
+                instructionAddress += instruction.size();
+            }
+        });
+        jPanel.add(nextInstructions);
+
 
 
         this.setContentPane(jPanel);
@@ -173,8 +218,7 @@ public class Debugger extends JFrame
         this.setVisible(true);
     }
 
-	public void executeUntilNextFrame(CPU cpu, String untilLy) {
-		int ly = Integer.parseInt(untilLy, 16);
+	public void executeUntilNextFrame(CPU cpu, int ly) {
 		byte b1;
 		for (int i = 0; i < 65000; i++)
 		{
@@ -202,7 +246,6 @@ public class Debugger extends JFrame
     }
 
 	private void nextInstruction(CPU cpu) {
-//		instructionQueue.put(cpu.getPC(), cpu.peakNextInstruction());
 		Instructions.next(cpu);
 	}
 
@@ -226,18 +269,70 @@ public class Debugger extends JFrame
 			String text = charAddress.getText();
 			int i = Integer.parseInt(text, 16);
 			byteValue.setText(Integer.toHexString(cpu.readByte((char) i) & 0xFF).toUpperCase());
+            resetTable(cpu.getPC());
 		});
     }
 
+    public void resetTable(char instructionAddress) {
+        int startAddress = Integer.parseInt((String) table.getValueAt(0, 0), 16);
+        int endAddress = Integer.parseInt((String) table.getValueAt(12, 0), 16);
+        if (instructionAddress >= startAddress && instructionAddress <= endAddress) {
+            for (int i = 0; i <= 12; i++)
+            {
+                int parsedInstructionAddress = Integer.parseInt((String) table.getValueAt(i, 0), 16);
+                if (parsedInstructionAddress >= instructionAddress) {
+                    table.setRowSelectionInterval(i, i);
+                    break;
+                }
+            }
+            return;
+        }
+
+        setupTable(instructionAddress);
+    }
+
+    private void setupTable(char instructionAddress)
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            table.setValueAt(String.format("%04X", instructionAddress & 0xFFFF), i, 0);
+
+            byte opCode = cpu.readByte(instructionAddress);
+            Instruction<?, ?> instruction = Instructions.getInstruction(opCode);
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("%02X", opCode));
+            if (instruction.size() >= 2) {
+                sb.append(String.format("%02X", cpu.readByte((char) (instructionAddress + 1))));
+            }
+            if (instruction.size() == 3) {
+                sb.append(String.format("%02X", cpu.readByte((char) (instructionAddress + 2))));
+            }
+            table.setValueAt(sb.toString(), i, 1);
+
+            table.setValueAt(instruction.getClass().getSimpleName(), i, 2);
+
+            sb = new StringBuilder();
+            if (instruction.getPrimary() != null) {
+                sb.append(instruction.getPrimary().friendlyName(cpu, instructionAddress));
+            }
+            if (instruction.getSecondary() != null) {
+                sb.append(", ").append(instruction.getSecondary().friendlyName(cpu, instructionAddress));
+            }
+            table.setValueAt(sb.toString(), i, 3);
+
+            instructionAddress += instruction.size();
+        }
+        table.setRowSelectionInterval(0, 0);
+    }
+
     public void executeUntilNextOccurence(CPU cpu, char address) {
-//        log.info("Executing until opcode: {}", String.format("%02X", opcode));
         int count = 0;
         while (cpu.getPC() != address) {
             count++;
 			nextInstruction(cpu);
         }
         if (count >= 100000) {
-            log.info("executed 100 times without finding opcode {}", String.format("%04X", (int) address & 0xFFFF));
+            System.out.printf("executed 100 times without finding opcode %04X\n", (int) address & 0xFFFF);
         }
     }
 

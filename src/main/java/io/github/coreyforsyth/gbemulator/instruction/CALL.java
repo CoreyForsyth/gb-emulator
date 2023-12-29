@@ -22,10 +22,11 @@ public class CALL extends Instruction<Boolean, Character>
             byte pcLower = cpu.getPCLower();
             byte pcHigher = cpu.getPCHigher();
             char sp = cpu.getSP();
-            cpu.writeByte(--sp, pcHigher);
-            cpu.writeByte(--sp, pcLower);
+            cpu.cpuWriteByte(--sp, pcHigher);
+            cpu.cpuWriteByte(--sp, pcLower);
             cpu.setSP(sp);
             cpu.setPC(routineAddress);
+            cpu.cycle();
         }
     }
 }

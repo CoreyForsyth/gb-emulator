@@ -20,8 +20,8 @@ public class PUSH extends Instruction<Character, Void>
         Character character = primary.apply(cpu);
         byte higher = (byte) (byte) ((character & 0xff00) >> 8);
         byte lower = (byte) (character & 0xff);
-        cpu.writeByte(--sp, higher);
-        cpu.writeByte(--sp, lower);
+        cpu.cpuWriteByte(--sp, higher);
+        cpu.cpuWriteByte(--sp, lower);
         cpu.setSP(sp);
     }
 }

@@ -18,7 +18,7 @@ public class RLC extends Instruction<Byte, Void>
     {
         int value = primary.apply(cpu);
         boolean carry = (value & 0x80) == 0x80;
-        value = (value << 1) | (carry ? 1 : 0);
+        value = ((value & 0xFF) << 1) | (carry ? 1 : 0);
         cpu.clearFlags();
         cpu.setZero(value == 0);
         cpu.setCarry(carry);

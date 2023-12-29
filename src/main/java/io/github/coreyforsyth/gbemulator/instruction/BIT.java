@@ -18,8 +18,8 @@ public class BIT extends Instruction<Byte, Void>
     public void accept(CPU cpu)
     {
         Byte value = primary.apply(cpu);
-        cpu.setZero((value & testMask) != value);
+        cpu.setZero((value & testMask) == 0);
         cpu.setHalfCarry(true);
-        cpu.setCarry(false);
+        cpu.setSubtraction(false);
     }
 }

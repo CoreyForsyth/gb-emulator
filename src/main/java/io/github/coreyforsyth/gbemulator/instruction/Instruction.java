@@ -35,4 +35,14 @@ public abstract class Instruction<P, S> implements Consumer<CPU> {
         int secondarySize = secondary != null ? secondary.getSize() : 0;
         return 1 + primarySize + secondarySize;
     }
+
+    public Accessor<P> getPrimary()
+    {
+        return primary;
+    }
+
+    public Accessor<S> getSecondary()
+    {
+        return secondary;
+    }
 }

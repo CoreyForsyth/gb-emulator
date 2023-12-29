@@ -18,7 +18,7 @@ public class RRC extends Instruction<Byte, Void>
     {
         int value = primary.apply(cpu);
         boolean carry = (value & 0x01) == 0x01;
-        value = (value >> 1) | (carry ? 0x80 : 0);
+        value = ((value & 0xFF) >> 1) | (carry ? 0x80 : 0);
         cpu.clearFlags();
         cpu.setCarry(carry);
         cpu.setZero(value == 0);

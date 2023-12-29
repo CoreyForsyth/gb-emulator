@@ -2,30 +2,31 @@ package io.github.coreyforsyth.gbemulator;
 
 import io.github.coreyforsyth.gbemulator.graphics.Display;
 import io.github.coreyforsyth.gbemulator.memory.Cartridge;
+import io.github.coreyforsyth.gbemulator.memory.EchoRam;
 import io.github.coreyforsyth.gbemulator.memory.HRam;
 import io.github.coreyforsyth.gbemulator.memory.IO;
 import io.github.coreyforsyth.gbemulator.memory.Oam;
+import io.github.coreyforsyth.gbemulator.memory.ReadWrite;
 import io.github.coreyforsyth.gbemulator.memory.VRam;
 import io.github.coreyforsyth.gbemulator.memory.WorkRam;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @Getter
 @Setter
-public class CPU
+@Slf4j
+public class CPU implements ReadWrite
 {
-    private final Cartridge cartridge;
-    private final WorkRam workRam;
-    private final HRam hRam;
-	private final VRam vRam;
-	private final Oam oam;
-	private final IO io;
-	private final Display display;
 
+    private final Bus bus;
+
+	private final Display display;
+    private final Timer timer;
+
+    private boolean halt;
     private boolean interruptEnabled;
-	private byte interruptRegister;
+	private byte IE;
 
     private byte A;
     private byte B;
@@ -41,7 +42,32 @@ public class CPU
     private char PC;
     private char SP;
 
+    private int cycleCount;
+
+
 	private boolean debug;
+
+    public CPU(Cartridge cartridge)
+    {
+        this.bus = new Bus();
+        this.display = new Display(bus);
+        this.timer = new Timer(bus);
+        IO io = new IO();
+        WorkRam mappedObject = new WorkRam();
+        bus.register(0, cartridge);
+        bus.register(0x8000, new VRam());
+        bus.register(0xA000, cartridge);
+        bus.register(0xC000, mappedObject);
+        bus.register(0xE000, new EchoRam(mappedObject));
+        bus.register(0xFE00, new Oam());
+        bus.register(0xFF00, io);
+        bus.register(0xFF04, timer);
+        bus.register(0xFF08, io);
+        bus.register(0xFF40, display);
+        bus.register(0xFF4D, io);
+        bus.register(0xFF80, new HRam());
+        bus.register(0xFFFF, this);
+    }
 
     public byte nextByte() {
         return cpuReadByte(readIncrementPC());
@@ -65,75 +91,24 @@ public class CPU
 
 	public void cycle()
 	{
-		display.cycle(4);
+        cycleCount++;
+		display.cycle();
+        timer.cycle();
 	}
 
-	public byte readByte(char address) {
-        if (address < 0x8000) {
-            return cartridge.read(address);
-        } else if (address < 0xA000) {
-            return vRam.read(address);
-        } else if (address < 0xC000) {
-            return cartridge.read(address);
-        } else if (address < 0xE000) {
-            return workRam.read(address);
-        } else if (address < 0xFE00) {
-            // mirror
-            return 0;
-        } else if (address < 0xFEA0) {
-			return oam.read(address);
-        } else if (address < 0xFF00) {
-            // unusable
-            return 0;
-        } else if (address < 0xFF80) {
-            return io.read(address);
-        } else if (address < 0xFFFF) {
-            return hRam.read(address);
-        } else {
-			System.out.println("Read Interrupt Flag");
-            return interruptRegister;
-        }
-    }
+
 
     public void cpuWriteByte(char address, byte value) {
         writeByte(address, value);
         cycle();
     }
 
+	public byte readByte(char address) {
+        return bus.read(address);
+    }
+
     public void writeByte(char address, byte value) {
-        if (address < 0x8000) {
-            cartridge.write(address, value);
-        } else if (address < 0xA000) {
-			vRam.write(address, value);
-		} else if (address < 0xC000) {
-            cartridge.write(address, value);
-        } else if (address < 0xE000) {
-            workRam.write(address, value);
-        } else if (address < 0xFE00) {
-            // mirror
-            System.out.printf("Writing %02X into mirror address %04X\n", value, (int) address);
-		} else if (address < 0xFEA0) {
-			oam.write(address, value);
-		} else if (address < 0xFF00) {
-            // forbidden
-            System.out.printf("Writing %02X into forbin address %04X\n", value, (int) address);
-		} else if (address < 0xFF80) {
-			io.write(address, value);
-			if (address == 0xFF46) {
-				char dmaStart = (char) (value * 0x0100);
-				for (int i = 0; i < 160; i++)
-				{
-					char sourceAddress = (char) (dmaStart + i);
-					char destinationAddress = (char) (0xFE00 + i);
-					this.writeByte(destinationAddress, readByte(sourceAddress));
-				}
-			}
-		} else if (address < 0xFFFF) {
-            hRam.write(address, value);
-        } else {
-			System.out.println("Wrote Interrupt Flag");
-			interruptRegister = value;
-		}
+        bus.write(address, value);
     }
 
     public byte getPCLower() {
@@ -157,12 +132,18 @@ public class CPU
     }
 
     public char getAF() {
-        int AF = isZero() ? 0x80 : 0;
-        AF |= isSubtraction() ? 0x40 : 0;
-        AF |= isHalfCarry() ? 0x20 : 0;
-        AF |= isCarry() ? 0x10 : 0;
+        int AF = getF();
         AF |= getA() << 8;
         return (char) AF;
+    }
+
+    private int getF()
+    {
+        int F = isZero() ? 0x80 : 0;
+        F |= isSubtraction() ? 0x40 : 0;
+        F |= isHalfCarry() ? 0x20 : 0;
+        F |= isCarry() ? 0x10 : 0;
+        return F;
     }
 
     public void setBC(char BC) {
@@ -198,7 +179,7 @@ public class CPU
     }
 
     public void writeBC(byte value) {
-        writeByte(getBC(), value);
+        cpuWriteByte(getBC(), value);
     }
 
     public byte readDE() {
@@ -206,7 +187,7 @@ public class CPU
     }
 
     public void writeDE(byte value) {
-        writeByte(getDE(), value);
+        cpuWriteByte(getDE(), value);
     }
 
     public byte readHL() {
@@ -214,7 +195,7 @@ public class CPU
     }
 
     public void writeHL(byte value) {
-        writeByte(getHL(), value);
+        cpuWriteByte(getHL(), value);
     }
 
     public void clearFlags() {
@@ -222,6 +203,46 @@ public class CPU
         subtraction = false;
         halfCarry = false;
         carry = false;
+    }
+
+    public void logState() {
+        boolean override = true;
+        if (debug || true)
+        {
+            String format = String.format("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n",
+                getA(), getF(), getB(), getC(), getD(), getE(), getH(), getL(),
+                (int) getSP(), (int) getPC(),
+                0xFF & readByte(getPC()), 0xFF & readByte((char) (getPC() + 1)), 0xFF & readByte((char) (getPC() + 2)), 0xFF & readByte((char) (getPC() + 3)));
+
+            log.info(format);
+        }
+
+
+//        String.format("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n",
+//            getA(), getF(), getB(), getC(), getD(), getE(), getH(), getL(),
+//            (int) getSP(), (int) getPC(),
+//            0xFF & readByte(getPC()), 0xFF & readByte((char) (getPC() + 1)), 0xFF & readByte((char) (getPC() + 2)), 0xFF & readByte((char) (getPC() + 3)));
+    }
+
+    @Override
+    public byte read(char address)
+    {
+        if (address == 0xFFFF) {
+            return IE;
+        } else {
+            return 0;
+        }
+    }
+
+    @Override
+    public void write(char address, byte value)
+    {
+        int a = 0b1101;
+        if (address == 0xFFFF)
+        {
+            System.out.printf("Writing IF, value 0x%02X\n", value);
+            IE = value;
+        }
     }
 
 }

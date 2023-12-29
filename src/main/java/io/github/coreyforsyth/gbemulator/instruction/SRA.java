@@ -14,10 +14,10 @@ public class SRA extends Instruction<Byte, Void>
     @Override
     public void accept(CPU cpu)
     {
-        int value = primary.apply(cpu);
-        int bit8 = value & 0x80;
+        int value = primary.apply(cpu) & 0xFF;
+        int bit7 = value & 0x80;
         boolean carry = (value & 0x01) == 1;
-        value = (value >> 1) | bit8;
+        value = (value >> 1) | bit7;
         cpu.clearFlags();
         cpu.setZero(value == 0);
         cpu.setCarry(carry);

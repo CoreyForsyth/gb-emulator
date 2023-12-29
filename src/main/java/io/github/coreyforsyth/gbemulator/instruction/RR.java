@@ -18,7 +18,7 @@ public class RR extends Instruction<Byte, Void>
     {
         int value = primary.apply(cpu);
         boolean carry = (value & 0x01) == 0x01;
-        value = (value >> 1) | (cpu.isCarry() ? 0x80 : 0);
+        value = ((value & 0xFF) >> 1) | (cpu.isCarry() ? 0x80 : 0);
         cpu.clearFlags();
         cpu.setZero(value == 0);
         cpu.setCarry(carry);

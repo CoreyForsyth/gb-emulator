@@ -3,16 +3,17 @@ package io.github.coreyforsyth.gbemulator.instruction;
 import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.CPU;
 
-public class CB extends Instruction<Byte, Void>
+class RRCA extends RRC
 {
-    public CB()
+    public RRCA()
     {
-        super(Accessor.IM8, null);
+        super(Accessor.A);
     }
 
     @Override
     public void accept(CPU cpu)
     {
-        CBInstructions.next(cpu);
+        super.accept(cpu);
+        cpu.setZero(false);
     }
 }

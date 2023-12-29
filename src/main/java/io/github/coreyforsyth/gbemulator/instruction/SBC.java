@@ -13,7 +13,7 @@ public class SBC extends ByteCarryInstruction
     @Override
     public int applyOperation(CPU cpu, Byte a, Byte b)
     {
-        return a - b - (cpu.isCarry() ? 1 : 0);
+        return (0xFF & a) - (0xFF & b) - (cpu.isCarry() ? 1 : 0);
     }
 
     @Override
