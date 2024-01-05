@@ -10,7 +10,7 @@ public class Application
 
     public static void main(String[] args) {
         FlatDarkLaf.setup();
-        CPU cpu = RomLoader.initCpu(new File(System.getProperty("user.dir") + "/src/main/resources/blue.gb"));
+        CPU cpu = RomLoader.initCpu(new File(System.getProperty("user.dir") + "/src/main/resources/instr_timing.gb"));
         Debugger debugger = new Debugger(cpu);
     }
 

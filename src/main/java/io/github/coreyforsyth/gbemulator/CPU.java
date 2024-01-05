@@ -50,16 +50,18 @@ public class CPU implements ReadWrite
     public CPU(Cartridge cartridge)
     {
         this.bus = new Bus();
-        this.display = new Display(bus);
+        Oam oam = new Oam();
+        VRam vRam = new VRam();
+        this.display = new Display(bus, oam, vRam);
         this.timer = new Timer(bus);
         IO io = new IO();
         WorkRam mappedObject = new WorkRam();
         bus.register(0, cartridge);
-        bus.register(0x8000, new VRam());
+        bus.register(0x8000, vRam);
         bus.register(0xA000, cartridge);
         bus.register(0xC000, mappedObject);
         bus.register(0xE000, new EchoRam(mappedObject));
-        bus.register(0xFE00, new Oam());
+        bus.register(0xFE00, oam);
         bus.register(0xFF00, io);
         bus.register(0xFF04, timer);
         bus.register(0xFF08, io);
@@ -207,7 +209,7 @@ public class CPU implements ReadWrite
 
     public void logState() {
         boolean override = true;
-        if (debug || true)
+        if (debug)
         {
             String format = String.format("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n",
                 getA(), getF(), getB(), getC(), getD(), getE(), getH(), getL(),

@@ -1,21 +1,29 @@
 package io.github.coreyforsyth.gbemulator.graphics;
 
 import io.github.coreyforsyth.gbemulator.Bus;
+import io.github.coreyforsyth.gbemulator.memory.Oam;
+import io.github.coreyforsyth.gbemulator.memory.ObjectAttribute;
 import io.github.coreyforsyth.gbemulator.memory.ReadWrite;
+import io.github.coreyforsyth.gbemulator.memory.VRam;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 
 public class Display implements ReadWrite
 {
 
 	private final Bus bus;
+    private final Oam oam;
+    private final VRam vRam;
 	private final IndexColorModel indexColorModel;
 
 	private BufferedImage image;
+    private BufferedImage displayOff;
 	private int dotIndex;
 	private int mode;
 
@@ -34,10 +42,12 @@ public class Display implements ReadWrite
 
     private boolean statLatch;
 
-	public Display(Bus bus)
+	public Display(Bus bus, Oam oam, VRam vRam)
 	{
 		this.bus = bus;
-		Color[] colors = new Color[4];
+        this.oam = oam;
+        this.vRam = vRam;
+        Color[] colors = new Color[4];
 		colors[0] = new Color(0xFFFFFF);
 		colors[1] = new Color(0xADADAD);
 		colors[2] = new Color(0x525252);
@@ -47,7 +57,8 @@ public class Display implements ReadWrite
 		indexColorModel = new IndexColorModel(2, 4, cmap, 0, false, -1, DataBuffer.TYPE_BYTE);
 		dotIndex = 0;
 		mode = 2;
-        image = new BufferedImage(256, 256, BufferedImage.TYPE_BYTE_BINARY, indexColorModel);
+        image = new BufferedImage(160, 144, BufferedImage.TYPE_BYTE_BINARY, indexColorModel);
+        displayOff = new BufferedImage(160, 144, BufferedImage.TYPE_BYTE_BINARY, indexColorModel);
 
 	}
 
@@ -61,12 +72,14 @@ public class Display implements ReadWrite
         if ((ly & 0xFF) > 0x8f) {
             if (mode == 0) {
                 vBlankInterrupt = true;
-                writeImage();
             }
             mode = 1;
         } else if (dotX <= 80) {
             mode = 2;
         } else if (dotX <= 252) {
+            if (mode == 2) {
+                writeLine();
+            }
             mode = 3;
         } else {
             mode = 0;
@@ -97,75 +110,132 @@ public class Display implements ReadWrite
 	}
 
 
-    public void writeImage()
+    public void writeLine()
 	{
 		WritableRaster raster = image.getRaster();
-
 
         char windowTileMapArea = (char) ((lcdc & 0x40) == 0x40 ? 0x9C00: 0x9800 );
         boolean windowEnable = (lcdc & 0x20) == 0x20;
         boolean backgroundAndWindowTileDataArea = (lcdc & 0x10) == 0x10;
+        boolean bgWindowEnabled = (lcdc & 0x01) == 0x01;
         char backgroundTileMapArea = (char) ((lcdc & 0x08) == 0x08 ? 0x9C00: 0x9800 );
         boolean objSize = (lcdc & 0x04) == 0x04;
         boolean objEnable = (lcdc & 0x02) == 0x02;
+        int lineNumber = ly & 0xFF;
+        int scrollX = scx & 0xFF;
+        int scrollY = scy & 0xFF;
+        int windowX = (wx & 0xFF) - 7;
+        int windowY = wy & 0xFF;
 
-		for (int tx = 0; tx < 32; tx++)
-		{
-			for (int ty = 0; ty < 32; ty++)
-			{
-				char tileIndexAddress = (char) (ty * 32 + tx + backgroundTileMapArea);
-				byte tileIndex = bus.read(tileIndexAddress);
-                char startAddress = getStartAddress(tileIndex, backgroundAndWindowTileDataArea);
-                int tileStartX = tx * 8;
-				int tileStartY = ty * 8;
-				drawTile(bus, raster, tileStartX, tileStartY, startAddress, false, false, false, bgp);
-			}
-		}
+        ObjectAttribute[] objectAttributes = oam.getObjectAttributes();
+        List<ObjectAttribute> objects = Arrays.stream(objectAttributes)
+            .filter(objectAttribute -> objectAttribute.getY() - 16 + (objSize ? 16 : 8) > lineNumber & objectAttribute.getY() - 16 <= lineNumber)
+            .limit(10)
+            .sorted(Comparator.comparingInt(o -> (o.getX() & 0xFF)))
+            .toList();
 
-        if (objEnable)
+        for (int fetcherX = 0; fetcherX < 160; fetcherX++)
         {
-            for (int objectIndex = 39; objectIndex >=0; objectIndex--)
-            {
-                int objectAddress = 0xFE00 + 4 * objectIndex;
-                byte yPos = bus.read((char) objectAddress);
-                byte xPos = bus.read((char) (objectAddress + 1));
-                byte tileIndex = bus.read((char) (objectAddress + 2));
-                byte attributes = bus.read((char) (objectAddress + 3));
-                boolean flipX = ((attributes >> 5) & 1) == 1;
-                boolean flipY = ((attributes >> 6) & 1) == 1;
-                // obj is always on top of BG without including priority flag
-                boolean priority = ((attributes >> 7) & 1) == 1;
-                int palette = (attributes & 0x10) == 0x10 ? obp1 : obp0;
-                drawTile(bus, raster, (xPos & 0xFF) - 8, (yPos & 0xFF) - 16, (char) (0x8000 + ((0xFF & tileIndex) * 16)), flipX, flipY, true, palette);
-            }
-        }
-        int i = 0b11001011;
-
-        // window
-        if (windowEnable) {
-            for (int tx = 0; tx < 32; tx++)
-            {
-                for (int ty = 0; ty < 32; ty++)
-                {
-                    char tileIndexAddress = (char) (ty * 32 + tx + windowTileMapArea);
-                    byte tileIndex = bus.read(tileIndexAddress);
-                    char startAddress = getStartAddress(tileIndex, backgroundAndWindowTileDataArea);
-                    int tileStartX = tx * 8;
-                    int tileStartY = ty * 8;
-                    drawTile(bus, raster, tileStartX, tileStartY, startAddress, false, false, false, bgp);
+            int pixel;
+            if (bgWindowEnabled) {
+                char tileMapAddress;
+                int tileMapX;
+                int tileMapY;
+                if (windowEnable && fetcherX >= windowX && lineNumber >= windowY) {
+                    tileMapX = fetcherX - windowX;
+                    tileMapY = lineNumber - windowY;
+                    tileMapAddress = windowTileMapArea;
+                } else {
+                    tileMapX = (fetcherX + scrollX) & 0xFF;
+                    tileMapY = (lineNumber + scrollY) & 0xFF;
+                    tileMapAddress = backgroundTileMapArea;
                 }
+                int tilePixelX = tileMapX % 8;
+                int tilePixelY = tileMapY % 8;
+                int tileIndex = (tileMapX / 8) + 32 * (tileMapY / 8);
+                char tileDataIndexAddress = (char) (tileMapAddress + tileIndex);
+                byte tileDataIndex = vRam.read(tileDataIndexAddress);
+                char startAddress = getStartAddress(tileDataIndex, backgroundAndWindowTileDataArea);
+                pixel = getPixel(startAddress, tilePixelX, tilePixelY);
+            } else {
+                pixel = 0;
             }
+            raster.setSample(fetcherX, lineNumber, 0, pixel);
+//            System.out.println(pixel);
+
+
+
         }
+//
+//		for (int tx = 0; tx < 32; tx++)
+//		{
+//			for (int ty = 0; ty < 32; ty++)
+//			{
+//				char tileIndexAddress = (char) (ty * 32 + tx + backgroundTileMapArea);
+//				byte tileIndex = bus.read(tileIndexAddress);
+//                char startAddress = getStartAddress(tileIndex, backgroundAndWindowTileDataArea);
+//                int tileStartX = tx * 8;
+//				int tileStartY = ty * 8;
+//				drawTile(bus, raster, tileStartX, tileStartY, startAddress, false, false, false, bgp);
+//			}
+//		}
+//
+//        if (objEnable)
+//        {
+//            for (int objectIndex = 39; objectIndex >=0; objectIndex--)
+//            {
+//                int objectAddress = 0xFE00 + 4 * objectIndex;
+//                byte yPos = bus.read((char) objectAddress);
+//                byte xPos = bus.read((char) (objectAddress + 1));
+//                byte tileIndex = bus.read((char) (objectAddress + 2));
+//                byte attributes = bus.read((char) (objectAddress + 3));
+//                boolean flipX = ((attributes >> 5) & 1) == 1;
+//                boolean flipY = ((attributes >> 6) & 1) == 1;
+//                // obj is always on top of BG without including priority flag
+//                boolean priority = ((attributes >> 7) & 1) == 1;
+//                int palette = (attributes & 0x10) == 0x10 ? obp1 : obp0;
+//                drawTile(bus, raster, (xPos & 0xFF) - 8, (yPos & 0xFF) - 16, (char) (0x8000 + ((0xFF & tileIndex) * 16)), flipX, flipY, true, palette);
+//            }
+//        }
+//        int i = 0b11001011;
+//
+//        // window
+//        if (windowEnable) {
+//            for (int tx = 0; tx < 32; tx++)
+//            {
+//                for (int ty = 0; ty < 32; ty++)
+//                {
+//                    char tileIndexAddress = (char) (ty * 32 + tx + windowTileMapArea);
+//                    byte tileIndex = bus.read(tileIndexAddress);
+//                    char startAddress = getStartAddress(tileIndex, backgroundAndWindowTileDataArea);
+//                    int tileStartX = tx * 8;
+//                    int tileStartY = ty * 8;
+//                    drawTile(bus, raster, tileStartX, tileStartY, startAddress, false, false, false, bgp);
+//                }
+//            }
+//        }
 
 	}
 
+    private int getPixel(char startAddress, int tilePixelX, int tilePixelY)
+    {
 
-    private static char getStartAddress(byte tileIndex, boolean bgWindowTiles)
+        int byteAddressOffset = getByteAddressOffset(tilePixelY, false);
+        char address1 = (char) (startAddress + byteAddressOffset);
+        char address2 = (char) (startAddress + byteAddressOffset + 1);
+        byte byte1 = bus.read(address1);
+        byte byte2 = bus.read(address2);
+        int byteIndex = getByteIndex(tilePixelX, false);
+        return  ((byte1 >> byteIndex) & 1) | ((byte2 >> byteIndex) & 1) << 1;
+    }
+
+
+    private static char getStartAddress(byte tileDataIndex, boolean bgWindowTiles)
     {
         if (bgWindowTiles) {
-            return (char)(0x8000 + ((tileIndex & 0xFF) * 16));
+            return (char)(0x8000 + ((tileDataIndex & 0xFF) * 16));
         } else {
-            return (char)(0x9000 + (tileIndex * 16));
+            return (char)(0x9000 + (tileDataIndex * 16));
         }
     }
 
@@ -212,10 +282,12 @@ public class Display implements ReadWrite
 
 	public BufferedImage getImage()
 	{
-		if (image == null) {
-			writeImage();
-		}
-		return image;
+        boolean displayEnabled = (lcdc & 0x80) == 0x80;
+        if (displayEnabled) {
+            return image;
+        } else {
+            return displayOff;
+        }
 	}
 
     private void executeDma()
@@ -254,7 +326,10 @@ public class Display implements ReadWrite
     public void write(char address, byte value)
     {
         switch (address) {
-            case Bus.LCDC -> lcdc = value;
+            case Bus.LCDC -> {
+                System.out.printf("Writing LCDC, value: %02X\n", value);
+                lcdc = value;
+            }
             case Bus.STAT -> stat = value;
             case Bus.SCY -> scy = value;
             case Bus.SCX -> scx = value;

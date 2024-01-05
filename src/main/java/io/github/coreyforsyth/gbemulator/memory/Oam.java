@@ -2,11 +2,15 @@ package io.github.coreyforsyth.gbemulator.memory;
 
 public class Oam implements ReadWrite
 {
-	final byte[] ram;
+    final ObjectAttribute[] objectAttributes;
 
 	public Oam()
 	{
-		this.ram = new byte[0xA0];
+		this.objectAttributes = new ObjectAttribute[40];
+        for (int i = 0; i < 40; i++)
+        {
+            objectAttributes[i] = new ObjectAttribute();
+        }
 	}
 
 	public int getOffset(int sp) {
@@ -19,12 +23,35 @@ public class Oam implements ReadWrite
 	@Override
 	public byte read(char address)
 	{
-		return ram[getOffset(address)];
+        int offset = getOffset(address);
+        ObjectAttribute objectAttribute = objectAttributes[offset / 4];
+        int objectAttributeIndex = offset % 4;
+        return switch (objectAttributeIndex) {
+            case 0 -> objectAttribute.getY();
+            case 1 -> objectAttribute.getX();
+            case 2 -> objectAttribute.getTileIndex();
+            case 3 -> objectAttribute.getAttributes();
+            default -> throw new IllegalStateException("Unexpected value: " + objectAttributeIndex);
+        };
 	}
 
 	@Override
 	public void write(char address, byte value)
 	{
-		ram[getOffset(address)] = value;
-	}
+        int offset = getOffset(address);
+        ObjectAttribute objectAttribute = objectAttributes[offset / 4];
+        int objectAttributeIndex = offset % 4;
+        switch (objectAttributeIndex) {
+            case 0 -> objectAttribute.setY(value);
+            case 1 -> objectAttribute.setX(value);
+            case 2 -> objectAttribute.setTileIndex(value);
+            case 3 -> objectAttribute.setAttributes(value);
+            default -> throw new IllegalStateException("Unexpected value: " + objectAttributeIndex);
+        }
+    }
+
+    public ObjectAttribute[] getObjectAttributes()
+    {
+        return objectAttributes;
+    }
 }

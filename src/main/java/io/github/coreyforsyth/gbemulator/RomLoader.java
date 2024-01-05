@@ -42,7 +42,7 @@ public class RomLoader
         cpu.setL((byte) 0x4D);
         cpu.setPC((char) 0x0100);
         cpu.setSP((char) 0xFFFE);
-		addDefaultScreen(cpu);
+//		addDefaultScreen(cpu);
         return cpu;
     }
 

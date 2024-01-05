@@ -20,8 +20,8 @@ public class ScreenPanel extends JPanel
 	public ScreenPanel(CPU cpu) {
         super();
 		this.cpu = cpu;
-		setMinimumSize(new Dimension(256, 256));
-        setPreferredSize(new Dimension(256, 256));
+		setMinimumSize(new Dimension(160, 144));
+        setPreferredSize(new Dimension(160, 144));
         setBackground(Color.BLACK);
     }
 
@@ -37,7 +37,7 @@ public class ScreenPanel extends JPanel
 
 	public void drawScreen(Graphics g) {
 		BufferedImage image = cpu.getDisplay().getImage();
-		g.drawImage(image.getScaledInstance(256, 256, Image.SCALE_DEFAULT), 0, 0, null);
+		g.drawImage(image, 0, 0, null);
 	}
 
 	public void update() {
