@@ -3,6 +3,7 @@ package io.github.coreyforsyth.gbemulator.instruction;
 import io.github.coreyforsyth.gbemulator.Accessor;
 import io.github.coreyforsyth.gbemulator.Bus;
 import io.github.coreyforsyth.gbemulator.CPU;
+import io.github.coreyforsyth.gbemulator.ExtraCycleAccessor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -215,7 +216,7 @@ public class Instructions
         instructions[0XBD] = new CP(Accessor.L);
         instructions[0XBE] = new CP(Accessor.ADR_HL);
         instructions[0XBF] = new CP(Accessor.A);
-        instructions[0XC0] = new RET(Accessor.Z, true);
+        instructions[0XC0] = new RET(new ExtraCycleAccessor<>(Accessor.Z), true);
         instructions[0XC1] = new POP(Accessor.BC);
         instructions[0XC2] = new JP(Accessor.Z, Accessor.IM16, true);
         instructions[0xC3] = new JP(Accessor.TRUE, Accessor.IM16, false);
@@ -223,7 +224,7 @@ public class Instructions
         instructions[0XC5] = new PUSH(Accessor.BC);
         instructions[0XC6] = new ADD(Accessor.A, Accessor.IM8);
         instructions[0XC7] = new RST((byte) 0x00);
-        instructions[0XC8] = new RET(Accessor.Z, false);
+        instructions[0XC8] = new RET(new ExtraCycleAccessor<>(Accessor.Z), false);
         instructions[0XC9] = new RET(Accessor.TRUE, false);
         instructions[0XCA] = new JP(Accessor.Z, Accessor.IM16, false);
         instructions[0XCB] = new CB();
@@ -231,7 +232,7 @@ public class Instructions
         instructions[0XCD] = new CALL(Accessor.TRUE, Accessor.IM16, false);
         instructions[0XCE] = new ADC(Accessor.A, Accessor.IM8);
         instructions[0XCF] = new RST((byte) 0x08);
-        instructions[0XD0] = new RET(Accessor.FC, true);
+        instructions[0XD0] = new RET(new ExtraCycleAccessor<>(Accessor.FC), true);
         instructions[0XD1] = new POP(Accessor.DE);
         instructions[0XD2] = new JP(Accessor.FC, Accessor.IM16, true);
         instructions[0XD3] = nop;
@@ -239,7 +240,7 @@ public class Instructions
         instructions[0XD5] = new PUSH(Accessor.DE);
         instructions[0XD6] = new SUB(Accessor.A, Accessor.IM8);
         instructions[0XD7] = new RST((byte) 0x10);
-        instructions[0XD8] = new RET(Accessor.FC, false);
+        instructions[0XD8] = new RET(new ExtraCycleAccessor<>(Accessor.FC), false);
         instructions[0XD9] = new RETI();
         instructions[0XDA] = new JP(Accessor.FC, Accessor.IM16, false);
         instructions[0XDB] = nop;
@@ -256,6 +257,13 @@ public class Instructions
         instructions[0XE6] = new AND(Accessor.IM8);
         instructions[0XE7] = new RST((byte) 0x20);
         instructions[0XE8] = new ADDC(Accessor.SP, Accessor.IM8_CHAR) {
+            @Override
+            public void accept(CPU cpu)
+            {
+                cpu.cycle();
+                super.accept(cpu);
+            }
+
             @Override
             public void setZ(CPU cpu, Character result)
             {
@@ -274,7 +282,7 @@ public class Instructions
                 cpu.setHalfCarry(((applyOperation(cpu, (char) (a & 0x000F), (char) (b & 0x000F))) & 0x0010) == 0x0010);
             }
         };
-        instructions[0XE9] = new JP(Accessor.TRUE, Accessor.HL, false);
+        instructions[0XE9] = new JP(Accessor.TRUE, Accessor.HL, false, false);
         // LD (a16), A
         instructions[0xEA] = new LD(Accessor.ADR_IM16_BYTE, Accessor.A);
         instructions[0XEB] = nop;
@@ -293,6 +301,13 @@ public class Instructions
         instructions[0XF6] = new OR(Accessor.IM8);
         instructions[0XF7] = new RST((byte) 0x30);
         instructions[0XF8] = new ADDC(Accessor.HL_SP, Accessor.IM8_CHAR) {
+
+            @Override
+            public void accept(CPU cpu)
+            {
+                super.accept(cpu);
+            }
+
             @Override
             public void setZ(CPU cpu, Character result)
             {
@@ -311,7 +326,7 @@ public class Instructions
                 cpu.setHalfCarry(((applyOperation(cpu, (char) (a & 0x000F), (char) (b & 0x000F))) & 0x0010) == 0x0010);
             }
         };
-        instructions[0XF9] = new LDC(Accessor.SP, Accessor.HL);
+        instructions[0XF9] = new LDC(Accessor.SP, new ExtraCycleAccessor<>(Accessor.HL));
         instructions[0XFA] = new LD(Accessor.A, Accessor.ADR_IM16_BYTE);
         // EI
         instructions[0xFB] = new EI();
@@ -330,29 +345,34 @@ public class Instructions
         Instruction<?, ?> instruction = null;
         byte b = 0;
         byte IE = cpu.getIE();
-        byte IF = cpu.cpuReadByte(Bus.IF);
+        byte IF = cpu.readByte(Bus.IF);
         int interrupts = IE & IF;
         if (interrupts != 0) {
             cpu.setHalt(false);
         }
         if (cpu.isInterruptEnabled()) {
             if ((0x01 & interrupts) != 0) {
+                cpu.cycle();
                 instruction = vblankInterrupt;
                 cpu.setInterruptEnabled(false);
                 cpu.writeByte(Bus.IF, (byte) (IF & 0xFE));
             } else if ((0x02 & interrupts) != 0) {
+                cpu.cycle();
                 instruction = statInterrupt;
                 cpu.setInterruptEnabled(false);
                 cpu.writeByte(Bus.IF, (byte) (IF & 0xFD));
             } else if ((0x04 & interrupts) != 0) {
+                cpu.cycle();
                 instruction = timerInterrupt;
                 cpu.setInterruptEnabled(false);
                 cpu.writeByte(Bus.IF, (byte) (IF & 0xFB));
             } else if ((0x08 & interrupts) != 0) {
+                cpu.cycle();
                 instruction = serialInterrupt;
                 cpu.setInterruptEnabled(false);
                 cpu.writeByte(Bus.IF, (byte) (IF & 0xF7));
             } else if ((0x10 & interrupts) != 0) {
+                cpu.cycle();
                 instruction = joypadInterrupt;
                 cpu.setInterruptEnabled(false);
                 cpu.writeByte(Bus.IF, (byte) (IF & 0xEF));
@@ -372,7 +392,7 @@ public class Instructions
             cpu.cycle();
         }
         cpu.logState();
-        return b;
+        return cpu.getCycleCount();
     }
 
     public static Instruction<?, ?> getInstruction(byte b)

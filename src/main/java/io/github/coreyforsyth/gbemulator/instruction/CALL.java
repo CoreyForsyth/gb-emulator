@@ -19,6 +19,7 @@ public class CALL extends Instruction<Boolean, Character>
         char routineAddress = secondary.apply(cpu);
         if (primary.apply(cpu) ^ negative)
         {
+            cpu.cycle();
             byte pcLower = cpu.getPCLower();
             byte pcHigher = cpu.getPCHigher();
             char sp = cpu.getSP();
@@ -26,7 +27,6 @@ public class CALL extends Instruction<Boolean, Character>
             cpu.cpuWriteByte(--sp, pcLower);
             cpu.setSP(sp);
             cpu.setPC(routineAddress);
-            cpu.cycle();
         }
     }
 }

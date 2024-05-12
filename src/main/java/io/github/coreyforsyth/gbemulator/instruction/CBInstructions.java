@@ -287,4 +287,8 @@ public class CBInstructions
         return b;
     }
 
+    public static Instruction<?, ?> getInstruction(byte b)
+    {
+        return instructions[b & 0xFF];
+    }
 }

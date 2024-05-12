@@ -5,11 +5,6 @@ import io.github.coreyforsyth.gbemulator.instruction.Instruction;
 import io.github.coreyforsyth.gbemulator.instruction.Instructions;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -28,6 +23,9 @@ import net.miginfocom.swing.MigLayout;
 public class Debugger extends JFrame
 {
     private CPU cpu;
+    final ScreenPanel screenPanel;
+    private volatile boolean run = false;
+    private volatile long lastCycleTime;
     private final JTextField a;
     private final JTextField f;
     private final JTextField b;
@@ -50,10 +48,11 @@ public class Debugger extends JFrame
         super("Debugger");
 
         cpu = initialCPU;
+        screenPanel = new ScreenPanel(cpu);
         cpu.logState();
         MigLayout migLayout = new MigLayout("wrap 5");
         JPanel jPanel = new JPanel(migLayout);
-        JFileChooser jFileChooser = new JFileChooser(System.getProperty("user.dir") + "/src/main/resources");
+        JFileChooser jFileChooser = new JFileChooser(System.getProperty("user.dir"));
 
 
 		JButton update = new JButton("Update");
@@ -63,6 +62,7 @@ public class Debugger extends JFrame
             int i = jFileChooser.showOpenDialog(jPanel);
             if (i == JFileChooser.APPROVE_OPTION) {
                 cpu = RomLoader.initCpu(jFileChooser.getSelectedFile());
+                screenPanel.setCpu(cpu);
                 cpu.logState();
                 updateRegisterValues();
             }
@@ -90,23 +90,20 @@ public class Debugger extends JFrame
             updateRegisterValues();
         });
 
-        ScreenPanel screenPanel = new ScreenPanel(cpu);
 
 		JTextField nextLy = new JTextField("91");
 		JButton nextFrame = new JButton("Next Frame");
 		nextFrame.addActionListener(a -> {
 			executeUntilNextFrame(cpu, Integer.parseInt(nextLy.getText(), 16));
 			updateRegisterValues();
-            screenPanel.update();
 		});
         JButton next10Frames = new JButton("Next Frames");
         next10Frames.addActionListener(a -> {
             for (int i = 0; i < 10; i++)
             {
-                executeUntilNextFrame(cpu, 90);
+                executeUntilNextFrame(cpu, 0x91);
             }
             updateRegisterValues();
-            screenPanel.update();
         });
 
 
@@ -143,6 +140,10 @@ public class Debugger extends JFrame
 			boolean selected = debug.isSelected();
 			cpu.setDebug(selected);
 		});
+        JCheckBox runCheckBox = new JCheckBox("Run");
+        runCheckBox.addChangeListener(l -> {
+            run = runCheckBox.isSelected();
+        });
 
         jPanel.add(romSelect, "skip");
         jPanel.add(nextInstruction);
@@ -208,6 +209,8 @@ public class Debugger extends JFrame
             }
         });
         jPanel.add(nextInstructions);
+        jPanel.add(runCheckBox);
+
 
 
 
@@ -216,22 +219,39 @@ public class Debugger extends JFrame
         this.pack();
         updateRegisterValues();
         this.setVisible(true);
+
+        lastCycleTime = System.nanoTime();
+
+        new Thread(() -> {
+            while (true)
+            {
+                Thread.onSpinWait();
+                if (run) {
+                    long currentTime = System.nanoTime();
+                    if (currentTime - lastCycleTime > 2000) {
+                        nextInstruction(cpu);
+                        lastCycleTime = currentTime;
+                    }
+                }
+
+            }
+        }).start();
     }
 
-	public void executeUntilNextFrame(CPU cpu, int ly) {
-		byte b1;
-		for (int i = 0; i < 65000; i++)
+	public void executeUntilNextFrame(CPU cpu, int lyc) {
+        byte ly;
+        for (int i = 0; i < 65000; i++)
 		{
-			b1 = cpu.readByte((char) 0xFF44);
-			if ((b1 & 0xFF) != ly) {
+            ly = cpu.getDisplay().getLy();
+			if ((ly & 0xFF) != lyc) {
 				break;
 			}
 			nextInstruction(cpu);
 		}
 		for (int i = 0; i < 65000; i++)
 		{
-			b1 = cpu.readByte((char) 0xFF44);
-			if ((b1 & 0xFF) == ly) {
+            ly = cpu.getDisplay().getLy();
+			if ((ly & 0xFF) == lyc) {
 				break;
 			}
 			nextInstruction(cpu);
@@ -247,6 +267,10 @@ public class Debugger extends JFrame
 
 	private void nextInstruction(CPU cpu) {
 		Instructions.next(cpu);
+        if (cpu.getDisplay().isImageReady()) {
+            cpu.getDisplay().setImageReady(false);
+            screenPanel.update();
+        }
 	}
 
     public void updateRegisterValues() {

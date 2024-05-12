@@ -14,7 +14,7 @@ import javax.swing.JPanel;
 
 public class ScreenPanel extends JPanel
 {
-	private final CPU cpu;
+	private CPU cpu;
 	private boolean update;
 
 	public ScreenPanel(CPU cpu) {
@@ -29,19 +29,20 @@ public class ScreenPanel extends JPanel
 	protected void paintComponent(Graphics g)
 	{
 		super.paintComponent(g);
-		if (update) {
-			update = false;
-			drawScreen(g);
-		}
+        BufferedImage image = cpu.getDisplay().getImage();
+        g.drawImage(image, 0, 0, null);
 	}
 
 	public void drawScreen(Graphics g) {
-		BufferedImage image = cpu.getDisplay().getImage();
-		g.drawImage(image, 0, 0, null);
 	}
 
 	public void update() {
 		update = true;
 		repaint();
 	}
+
+    public void setCpu(CPU cpu)
+    {
+        this.cpu = cpu;
+    }
 }

@@ -3,6 +3,7 @@ package io.github.coreyforsyth.gbemulator;
 import io.github.coreyforsyth.gbemulator.memory.Cartridge;
 import io.github.coreyforsyth.gbemulator.memory.MB1;
 import io.github.coreyforsyth.gbemulator.memory.MB3;
+import io.github.coreyforsyth.gbemulator.memory.RomOnlyCartridge;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,7 +24,9 @@ public class RomLoader
         }
         byte cartridgeType = data[0x0147];
         Cartridge cartridge;
-        if (cartridgeType == 1) {
+        if (cartridgeType == 0) {
+            cartridge = new RomOnlyCartridge(data);
+        } else if (cartridgeType == 1) {
             cartridge = new MB1(data);
         } else {
             cartridge = new MB3(data);

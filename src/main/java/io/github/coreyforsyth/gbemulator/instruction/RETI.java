@@ -14,7 +14,6 @@ public class RETI extends RET
     public void accept(CPU cpu)
     {
         super.accept(cpu);
-        System.out.println("RETI, turning on IME flag");
         cpu.setInterruptEnabled(true);
     }
 }

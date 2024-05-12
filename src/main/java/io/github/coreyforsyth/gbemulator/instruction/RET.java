@@ -18,6 +18,7 @@ public class RET extends Instruction<Boolean, Void>
     {
         if (primary.apply(cpu) ^ negative)
         {
+            cpu.cycle();
             char sp = cpu.getSP();
             byte pcLower = cpu.cpuReadByte(sp++);
             byte pcHigher = cpu.cpuReadByte(sp++);

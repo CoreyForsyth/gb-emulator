@@ -70,7 +70,6 @@ public class MB1 implements Cartridge
             if (newRomBank == 0) {
                 newRomBank = 1;
             }
-            System.out.println("New rom address: " + newRomBank);
             romBank = newRomBank;
         } else if (address < 0x6000) {
             if ((value & 0x03) == value) {

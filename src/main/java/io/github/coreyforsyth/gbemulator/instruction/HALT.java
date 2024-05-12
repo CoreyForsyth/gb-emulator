@@ -13,6 +13,5 @@ public class HALT extends Instruction<Void, Void>
     public void accept(CPU cpu)
     {
         cpu.setHalt(true);
-        System.out.println("HALTED");
     }
 }

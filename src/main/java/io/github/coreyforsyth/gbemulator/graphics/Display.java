@@ -24,6 +24,8 @@ public class Display implements ReadWrite
 
 	private BufferedImage image;
     private BufferedImage displayOff;
+
+    private volatile boolean imageReady;
 	private int dotIndex;
 	private int mode;
 
@@ -63,7 +65,7 @@ public class Display implements ReadWrite
 	}
 
 	public void cycle() {
-		dotIndex += 4;
+		dotIndex += 16;
         dotIndex %= 70224;
         int dotX = dotIndex % 456;
         ly = (byte) (dotIndex / 456);
@@ -89,6 +91,7 @@ public class Display implements ReadWrite
         refreshStat(lycSelected);
 
         if (vBlankInterrupt) {
+            imageReady = true;
             bus.requestInterrupt(0x01);
         }
 
@@ -129,8 +132,8 @@ public class Display implements ReadWrite
 
         ObjectAttribute[] objectAttributes = oam.getObjectAttributes();
         List<ObjectAttribute> objects = Arrays.stream(objectAttributes)
-            .filter(objectAttribute -> objectAttribute.getY() - 16 + (objSize ? 16 : 8) > lineNumber & objectAttribute.getY() - 16 <= lineNumber)
-            .limit(10)
+            .filter(objectAttribute -> (objectAttribute.getY() & 0xFF) - 16 + (objSize ? 16 : 8) > lineNumber & (objectAttribute.getY() & 0xFF) - 16 <= lineNumber)
+            .limit(100)
             .sorted(Comparator.comparingInt(o -> (o.getX() & 0xFF)))
             .toList();
 
@@ -156,11 +159,43 @@ public class Display implements ReadWrite
                 char tileDataIndexAddress = (char) (tileMapAddress + tileIndex);
                 byte tileDataIndex = vRam.read(tileDataIndexAddress);
                 char startAddress = getStartAddress(tileDataIndex, backgroundAndWindowTileDataArea);
-                pixel = getPixel(startAddress, tilePixelX, tilePixelY);
+                pixel = getColor(getPixelColorIndex(startAddress, tilePixelX, tilePixelY), bgp & 0xFF);
             } else {
                 pixel = 0;
             }
+            for (ObjectAttribute object : objects)
+            {
+                int x = object.getX() & 0xFF;
+                int y = object.getY() & 0xFF;
+                byte objectTileIndex = object.getTileIndex();
+
+                if (x - 8 > fetcherX || x <= fetcherX) {
+                    continue;
+                }
+
+                if (objSize) {
+                    if (y - 8 > lineNumber & y - 16 <= lineNumber) {
+                        objectTileIndex = (byte) (objectTileIndex & 0xFE);
+                    } else {
+                        objectTileIndex = (byte) (objectTileIndex | 0x01);
+                        y += 8;
+                    }
+                }
+                int objTilePixelX = fetcherX - x + 8;
+                int objTilePixelY = lineNumber - y + 16;
+                char startAddress = getStartAddress(objectTileIndex, true);
+                int objPixelColorIndex = getPixelColorIndex(startAddress, objTilePixelX, objTilePixelY);
+                if (objPixelColorIndex != 0) {
+                    if (!object.isPriority() || pixel == 0) {
+                        pixel = getColor(objPixelColorIndex, object.isDmgPalette() ? obp1 : obp0);
+                    }
+                    break;
+                }
+            }
+            
             raster.setSample(fetcherX, lineNumber, 0, pixel);
+            
+            
 //            System.out.println(pixel);
 
 
@@ -217,7 +252,7 @@ public class Display implements ReadWrite
 
 	}
 
-    private int getPixel(char startAddress, int tilePixelX, int tilePixelY)
+    private int getPixelColorIndex(char startAddress, int tilePixelX, int tilePixelY)
     {
 
         int byteAddressOffset = getByteAddressOffset(tilePixelY, false);
@@ -227,6 +262,10 @@ public class Display implements ReadWrite
         byte byte2 = bus.read(address2);
         int byteIndex = getByteIndex(tilePixelX, false);
         return  ((byte1 >> byteIndex) & 1) | ((byte2 >> byteIndex) & 1) << 1;
+    }
+
+    private int getColor(int colorIndex, int palette) {
+        return (palette >> (colorIndex << 1)) & 3;
     }
 
 
@@ -293,7 +332,6 @@ public class Display implements ReadWrite
     private void executeDma()
     {
         char dmaStart = (char) ((dma & 0xFF) * 0x0100);
-        System.out.printf("STARTING DMA FROM ADDRESS: %04X\n", (int) dmaStart);
         for (int i = 0; i < 0xa0; i++)
         {
             char sourceAddress = (char) (dmaStart + i);
@@ -327,7 +365,6 @@ public class Display implements ReadWrite
     {
         switch (address) {
             case Bus.LCDC -> {
-                System.out.printf("Writing LCDC, value: %02X\n", value);
                 lcdc = value;
             }
             case Bus.STAT -> stat = value;
@@ -347,5 +384,20 @@ public class Display implements ReadWrite
             case Bus.WX -> wx = value;
             default -> throw new IllegalStateException("Unexpected value: " + address);
         };
+    }
+
+    public boolean isImageReady()
+    {
+        return imageReady;
+    }
+
+    public void setImageReady(boolean imageReady)
+    {
+        this.imageReady = imageReady;
+    }
+
+    public byte getLy()
+    {
+        return ly;
     }
 }

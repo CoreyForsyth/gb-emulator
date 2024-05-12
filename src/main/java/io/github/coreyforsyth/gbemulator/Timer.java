@@ -103,7 +103,7 @@ public class Timer implements ReadWrite
                 if (tima == 0)
                 {
                     tima = tma;
-                    System.out.printf("timer interrupted, tima reset to %02X\n", tima);
+//                    System.out.printf("timer interrupted, tima reset to %02X\n", tima);
                     bus.requestInterrupt(0x4);
                 }
             }

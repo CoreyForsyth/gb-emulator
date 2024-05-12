@@ -3,6 +3,7 @@ package io.github.coreyforsyth.gbemulator;
 import io.github.coreyforsyth.gbemulator.graphics.Display;
 import io.github.coreyforsyth.gbemulator.memory.Cartridge;
 import io.github.coreyforsyth.gbemulator.memory.EchoRam;
+import io.github.coreyforsyth.gbemulator.memory.Forbidden;
 import io.github.coreyforsyth.gbemulator.memory.HRam;
 import io.github.coreyforsyth.gbemulator.memory.IO;
 import io.github.coreyforsyth.gbemulator.memory.Oam;
@@ -67,6 +68,7 @@ public class CPU implements ReadWrite
         bus.register(0xFF08, io);
         bus.register(0xFF40, display);
         bus.register(0xFF4D, io);
+        bus.register(0xFEA0, new Forbidden());
         bus.register(0xFF80, new HRam());
         bus.register(0xFFFF, this);
     }
@@ -82,13 +84,12 @@ public class CPU implements ReadWrite
     }
 
     public byte peakNextInstruction() {
-        return cpuReadByte(PC);
+        return readByte(PC);
     }
 
 	public byte cpuReadByte(char address) {
-		byte b = readByte(address);
-		cycle();
-		return b;
+        cycle();
+        return readByte(address);
 	}
 
 	public void cycle()
@@ -101,8 +102,8 @@ public class CPU implements ReadWrite
 
 
     public void cpuWriteByte(char address, byte value) {
-        writeByte(address, value);
         cycle();
+        writeByte(address, value);
     }
 
 	public byte readByte(char address) {
@@ -218,12 +219,6 @@ public class CPU implements ReadWrite
 
             log.info(format);
         }
-
-
-//        String.format("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n",
-//            getA(), getF(), getB(), getC(), getD(), getE(), getH(), getL(),
-//            (int) getSP(), (int) getPC(),
-//            0xFF & readByte(getPC()), 0xFF & readByte((char) (getPC() + 1)), 0xFF & readByte((char) (getPC() + 2)), 0xFF & readByte((char) (getPC() + 3)));
     }
 
     @Override
@@ -242,7 +237,6 @@ public class CPU implements ReadWrite
         int a = 0b1101;
         if (address == 0xFFFF)
         {
-            System.out.printf("Writing IF, value 0x%02X\n", value);
             IE = value;
         }
     }

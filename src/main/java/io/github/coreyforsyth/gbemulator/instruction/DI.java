@@ -13,7 +13,6 @@ public class DI extends Instruction<Void, Void>
     @Override
     public void accept(CPU cpu)
     {
-        System.out.println("DI, turning off IME flag");
         cpu.setInterruptEnabled(false);
     }
 }

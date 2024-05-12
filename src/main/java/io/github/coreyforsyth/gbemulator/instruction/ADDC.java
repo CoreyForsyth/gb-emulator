@@ -18,6 +18,13 @@ public class ADDC extends CharCarryInstruction
     }
 
     @Override
+    public void accept(CPU cpu)
+    {
+        cpu.cycle();
+        super.accept(cpu);
+    }
+
+    @Override
     public void setZ(CPU cpu, Character result)
     {
 

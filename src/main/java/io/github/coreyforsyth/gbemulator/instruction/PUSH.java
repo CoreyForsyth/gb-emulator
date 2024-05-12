@@ -16,6 +16,7 @@ public class PUSH extends Instruction<Character, Void>
     @Override
     public void accept(CPU cpu)
     {
+        cpu.cycle();
         char sp = cpu.getSP();
         Character character = primary.apply(cpu);
         byte higher = (byte) (byte) ((character & 0xff00) >> 8);

@@ -77,7 +77,7 @@ public class Accessor<T> implements Function<CPU, T>, BiConsumer<CPU, T>
             return String.format("0x%04X", (pcAddress + b + 2) & 0xFFFF);
         }
     };
-    public static Accessor<Character> IM8_CHAR = new Accessor<>("s8", cpu -> (char) (cpu.nextByte()), (cpu, value) -> {});
+    public static Accessor<Character> IM8_CHAR = new Accessor<>("s8", cpu -> (char) (cpu.nextByte()), (cpu, value) -> {}, 1);
     public static Accessor<Byte> REL_FF_IM8 = new Accessor<>("a8", cpu -> cpu.cpuReadByte((char) (0xFF00 | (cpu.nextByte() & 0xFF))),
         (cpu, value) -> cpu.cpuWriteByte((char) (0xFF00 | (cpu.nextByte() & 0xFF)), value), 1) {
         @Override
@@ -96,7 +96,7 @@ public class Accessor<T> implements Function<CPU, T>, BiConsumer<CPU, T>
             return String.format("(0x%04X)", 0xFF00 | (cpu.getC() & 0xFF));
         }
     };
-    public static Accessor<Byte> ADR_IM16_BYTE = new Accessor<>("(a16)", cpu -> cpu.readByte(cpu.nextChar()),
+    public static Accessor<Byte> ADR_IM16_BYTE = new Accessor<>("(a16)", cpu -> cpu.cpuReadByte(cpu.nextChar()),
         (cpu, value) -> cpu.cpuWriteByte(cpu.nextChar(), value), 2) {
         @Override
         public String friendlyName(CPU cpu, char pcAddress)

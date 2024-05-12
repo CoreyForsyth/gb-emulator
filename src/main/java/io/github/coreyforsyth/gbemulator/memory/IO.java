@@ -14,7 +14,7 @@ public class IO implements ReadWrite
 
 	public IO()
 	{
-		this.ram = new byte[0x007F];
+		this.ram = new byte[0x0080];
 	}
 
 	public int getOffset(int sp) {
@@ -37,8 +37,15 @@ public class IO implements ReadWrite
 //		{
 //			case 0xFF0F -> printWriteLog(address, value, "IF", "Writing");
 //		}
-		ram[getOffset(address)] = value;
-	}
+        try
+        {
+            ram[getOffset(address)] = value;
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
 
 	private static void printWriteLog(int address, byte value, String type, String action)
 	{
